@@ -4,11 +4,11 @@ import random
 from datetime import datetime, timedelta
 import io
 from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 
 # Function to generate the timetable
 def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=5, num_sections=1, half_day=False):
-    # Initialize the timetable structure with days and sections
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
     timetables = {f"Section {i+1}": {day: [] for day in days} for i in range(num_sections)}
     
@@ -16,11 +16,9 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
     start_datetime = datetime.combine(today, start_time)
     end_datetime = datetime.combine(today, end_time)
 
-    # Calculate total available time minus breaks
     total_minutes = (end_datetime - start_datetime).total_seconds() / 60 - sum(break_info[1] for break_info in breaks)
     class_duration = total_minutes // num_classes
 
-    # Generate time slots
     time_slots = []
     current_time = start_datetime
     for _ in range(num_classes):
@@ -28,15 +26,12 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
         time_slots.append((current_time.strftime("%I:%M %p"), end_time.strftime("%I:%M %p")))
         current_time = end_time
 
-    # Include breaks in time slots
     if not half_day:
         for break_time, duration in breaks:
             time_slots.append((break_time.strftime("%I:%M %p"), "BREAK"))
 
-    # Sort and structure the time slots
     time_slots = sorted(set(time_slots))
 
-    # Fill the timetable with subjects and faculty for each section
     for section in timetables:
         for day in days:
             used_faculty = set()
@@ -46,7 +41,6 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
                     timetables[section][day].append((time_slot, "BREAK", ""))
                     continue
                 
-                # Randomly select subject and ensure no faculty overlaps
                 subject = random.choice(subjects)
                 available_faculty = [fac for fac in faculty_members[subject] if fac not in used_faculty]
                 if not available_faculty:
@@ -55,8 +49,6 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
                 
                 faculty = random.choice(available_faculty)
                 used_faculty.add(faculty)
-                
-                # Store in the timetable
                 timetables[section][day].append((time_slot, subject, faculty))
 
     return timetables, time_slots
@@ -64,50 +56,47 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
 # Function to export timetable as PDF
 def export_to_pdf(timetables, time_slots):
     buffer = io.BytesIO()
-    pdf_canvas = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-    pdf_canvas.setFont("Helvetica", 10)
-
-    start_x, start_y = 50, height - 40
-    row_height = 20
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
 
     for section, timetable in timetables.items():
-        pdf_canvas.drawString(start_x, start_y, f"Timetable for {section}")
-        start_y -= 30
-
-        # Draw header row with time slots
-        pdf_canvas.drawString(start_x, start_y, "Day")
-        for i, (start, end) in enumerate(time_slots):
-            slot_text = f"{start} - {end}" if end != "BREAK" else "BREAK"
-            pdf_canvas.drawString(start_x + 100 + i * 100, start_y, slot_text)
-
-        # Populate each day with classes
+        data = [["Day"] + [f"{start} - {end}" if end != "BREAK" else "BREAK" for start, end in time_slots]]
+        
         for day, classes in timetable.items():
-            start_y -= row_height
-            pdf_canvas.drawString(start_x, start_y, day)
+            row = [day]
+            for time_slot, subject, faculty in classes:
+                if subject == "BREAK":
+                    row.append("BREAK")
+                else:
+                    row.append(f"{subject}\n{faculty}")
+            data.append(row)
 
-            for i, (time_slot, subject, faculty) in enumerate(classes):
-                class_text = f"{subject} - {faculty}" if subject != "BREAK" else "BREAK"
-                pdf_canvas.drawString(start_x + 100 + i * 100, start_y, class_text)
+        timetable_table = Table(data, colWidths=[50] + [65] * len(time_slots))
+        timetable_table.setStyle(TableStyle([
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.whitesmoke),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+        ]))
 
-            start_y -= 10
+        elements.append(timetable_table)
+        elements.append(Table([[""]], colWidths=[1]))  # Add space between sections
 
-        start_y -= 40
-
-    pdf_canvas.save()
+    doc.build(elements)
     buffer.seek(0)
     return buffer
 
 # Streamlit app
 st.title("Timetable Generator")
 
-# Sidebar inputs for college timings
 start_time = st.sidebar.time_input("College Start Time", value=datetime.strptime("09:00 AM", "%I:%M %p").time())
 end_time = st.sidebar.time_input("College End Time", value=datetime.strptime("03:00 PM", "%I:%M %p").time())
-group_name = st.sidebar.text_input("Group Name")
 num_sections = st.sidebar.number_input("Number of Sections", min_value=1, value=1)
 
-# Break configuration
 breaks = []
 if st.sidebar.checkbox("Add Morning Break"):
     morning_break_time = st.sidebar.time_input("Morning Break Time", value=datetime.strptime("11:00 AM", "%I:%M %p").time())
@@ -119,7 +108,6 @@ if st.sidebar.checkbox("Add Lunch Break"):
     lunch_break_duration = st.sidebar.number_input("Lunch Break Duration (minutes)", min_value=1, value=60)
     breaks.append((lunch_break_time, lunch_break_duration))
 
-# Subjects and faculty inputs
 num_subjects = st.sidebar.number_input("Number of Subjects", min_value=1, value=5)
 subjects = []
 faculty_members = {}
@@ -131,34 +119,21 @@ for i in range(num_subjects):
         num_faculty = st.sidebar.number_input(f"Number of Faculty for {subject}", min_value=1, value=1)
         faculty = [st.sidebar.text_input(f"Faculty {j + 1} for {subject}") for j in range(num_faculty)]
         faculty_members[subject] = faculty
- 
-# Flatten the timetable for display in Streamlit
-def flatten_timetable(timetable_data):
-    flattened_data = []
-    for section, timetable in timetable_data.items():
-        for day, classes in timetable.items():
-            for time_slot, subject, faculty in classes:
-                start_time, end_time = time_slot if time_slot[1] != "BREAK" else (time_slot[0], "BREAK")
-                flattened_data.append({
-                    "Section": section,
-                    "Day": day,
-                    "Start Time": start_time,
-                    "End Time": end_time,
-                    "Subject": subject,
-                    "Faculty": faculty if faculty != "" else "No Faculty"
-                })
-    return pd.DataFrame(flattened_data)
 
-# Generate timetable and flatten it
 if st.button("Generate Timetable"):
     timetable_data, time_slots = generate_timetable(
         start_time, end_time, subjects, faculty_members, breaks, num_classes=5, num_sections=num_sections
     )
-    flat_timetable_df = flatten_timetable(timetable_data)
+    flat_timetable_df = pd.DataFrame([
+        {"Section": section, "Day": day, "Time Slot": time_slot[0] + " - " + time_slot[1] if time_slot[1] != "BREAK" else "BREAK",
+         "Subject": subject, "Faculty": faculty}
+        for section, days in timetable_data.items()
+        for day, classes in days.items()
+        for time_slot, subject, faculty in classes
+    ])
     st.write("### Timetable")
-    st.dataframe(flat_timetable_df)  # Display the flattened timetable
+    st.dataframe(flat_timetable_df)
 
-    # Button to export timetable to PDF
     if st.button("Export to PDF"):
         pdf_buffer = export_to_pdf(timetable_data, time_slots)
         st.download_button("Download Timetable PDF", data=pdf_buffer, file_name="timetable.pdf", mime="application/pdf")
