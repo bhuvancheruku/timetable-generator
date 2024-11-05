@@ -145,6 +145,7 @@ if st.button("Generate Timetable"):
         # Draw the timetable to PDF (simple example)
         y_position = height - 50
         for subject in df.columns:
+            subject_text = str(subject) if subject is not None else"Unknown"
             p.drawString(100, y_position, subject)
             y_position -= 20
             
