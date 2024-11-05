@@ -93,6 +93,7 @@ def export_to_pdf(timetables, time_slots):
 # Streamlit app
 st.title("Timetable Generator")
 
+# Collecting inputs with checks for empty fields
 start_time = st.sidebar.time_input("College Start Time", value=datetime.strptime("09:00 AM", "%I:%M %p").time())
 end_time = st.sidebar.time_input("College End Time", value=datetime.strptime("03:00 PM", "%I:%M %p").time())
 num_sections = st.sidebar.number_input("Number of Sections", min_value=1, value=1)
@@ -120,25 +121,31 @@ for i in range(num_subjects):
         faculty = [st.sidebar.text_input(f"Faculty {j + 1} for {subject}") for j in range(num_faculty)]
         faculty_members[subject] = faculty
 
+# Alerts for missing inputs
 if st.button("Generate Timetable"):
-    timetable_data, time_slots = generate_timetable(
-        start_time, end_time, subjects, faculty_members, breaks, num_classes=5, num_sections=num_sections
-    )
-    flat_timetable_df = pd.DataFrame([
-        {"Section": section, "Day": day, "Time Slot": time_slot[0] + " - " + time_slot[1] if time_slot[1] != "BREAK" else "BREAK",
-         "Subject": subject, "Faculty": faculty}
-        for section, days in timetable_data.items()
-        for day, classes in days.items()
-        for time_slot, subject, faculty in classes
-    ])
+    if not subjects:
+        st.warning("Please provide at least one subject.")
+    elif not all(faculty_members.get(sub) for sub in subjects):
+        st.warning("Please ensure all subjects have at least one faculty member.")
+    else:
+        timetable_data, time_slots = generate_timetable(
+            start_time, end_time, subjects, faculty_members, breaks, num_classes=5, num_sections=num_sections
+        )
+        flat_timetable_df = pd.DataFrame([
+            {"Section": section, "Day": day, "Time Slot": time_slot[0] + " - " + time_slot[1] if time_slot[1] != "BREAK" else "BREAK",
+             "Subject": subject, "Faculty": faculty}
+            for section, days in timetable_data.items()
+            for day, classes in days.items()
+            for time_slot, subject, faculty in classes
+        ])
 
-    # Store timetable data in session state
-    st.session_state.timetable_data = timetable_data
-    st.session_state.time_slots = time_slots
-    st.session_state.flat_timetable_df = flat_timetable_df
+        # Store timetable data in session state
+        st.session_state.timetable_data = timetable_data
+        st.session_state.time_slots = time_slots
+        st.session_state.flat_timetable_df = flat_timetable_df
 
-    st.write("### Timetable")
-    st.dataframe(flat_timetable_df)
+        st.write("### Timetable")
+        st.dataframe(flat_timetable_df)
 
 # Export PDF button
 if 'flat_timetable_df' in st.session_state:
