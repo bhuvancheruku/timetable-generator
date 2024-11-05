@@ -10,7 +10,11 @@ import io
 
 # Function to generate the timetable
 def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=8, lab_sessions=3):
-    class_duration = (end_time.hour * 60 + end_time.minute - (start_time.hour * 60 + start_time.minute) - sum(breaks)) // num_classes
+    # Calculate total break duration
+    total_break_duration = sum(break[1] for break in breaks)
+    
+    # Calculate class duration
+    class_duration = (end_time.hour * 60 + end_time.minute - (start_time.hour * 60 + start_time.minute) - total_break_duration) // num_classes
     timetable = {day: [] for day in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]}
     
     for day in timetable:
@@ -31,7 +35,7 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
         
         # Adding breaks
         for break_time in breaks:
-            timetable[day].append({"Time": break_time[0], "Subject": "Break", "Faculty": ""})
+            timetable[day].append({"Time": break_time[0].strftime("%H:%M"), "Subject": "Break", "Faculty": ""})
             current_time += timedelta(minutes=break_time[1])
     
     # Add lab sessions
@@ -131,6 +135,7 @@ if st.button("Generate Timetable"):
         if st.button("Export to PDF"):
             pdf_buffer = export_to_pdf(timetable_df)
             st.download_button("Download PDF", pdf_buffer, "timetable.pdf", "application/pdf")
+
 
 
 
