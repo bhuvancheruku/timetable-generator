@@ -177,7 +177,7 @@ if st.button("Generate Timetable"):
 
             # Button to export the timetable to PDF
             if st.button("Export to PDF"):
-                pdf_buffer = export_to_pdf(timetable_df
+                pdf_buffer = export_to_pdf(timetable_df)
 
 
 
