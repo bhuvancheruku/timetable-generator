@@ -7,8 +7,9 @@ from datetime import datetime, timedelta, time
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
-def generate_timetable(num_classes, num_days, subjects, faculty_members, start_time, end_time, morning_break_time, afternoon_break_time, lab_sessions):
+def generate_timetable(num_classes, num_days, subjects, faculty_members, start_time, end_time, morning_break_time, afternoon_break_time):
     timetable = []
+    
     for day in range(num_days):
         daily_schedule = []
         used_faculty = set()
@@ -30,48 +31,39 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, start_t
                 current_datetime += timedelta(hours=1)
                 continue
 
-            # Check if lab session should be added
-            if lab_sessions[day] and classes_added < 3:
-                lab_subject = random.choice(subjects)
-                lab_faculty = random.choice(faculty_members[lab_subject])
-                daily_schedule.append(f"Lab - {lab_subject} ({lab_faculty})")
-                used_faculty.add(lab_faculty)
-                used_subjects.add(lab_subject)
-                current_datetime += timedelta(minutes=60)
-                classes_added += 1
-                continue
+            # Add a lab session (every day has a lab session)
+            lab_subject = random.choice(subjects)
+            lab_faculty = random.choice(faculty_members[lab_subject])
+            daily_schedule.append(f"Lab - {lab_subject} ({lab_faculty})")
+            used_faculty.add(lab_faculty)
+            used_subjects.add(lab_subject)
+            current_datetime += timedelta(minutes=60)  # Assuming a lab takes 1 hour
+            classes_added += 1
 
-            # Choose a subject and faculty ensuring no overlaps
-            subject = random.choice([subj for subj in subjects if subj not in used_subjects])
-            available_faculty = [fac for fac in faculty_members[subject] if fac not in used_faculty]
+            # Choose subjects and faculty for the remaining classes
+            while classes_added < num_classes:
+                subject = random.choice([subj for subj in subjects if subj not in used_subjects])
+                available_faculty = [fac for fac in faculty_members[subject] if fac not in used_faculty]
 
-            if available_faculty:  # Check if there are available faculty members
-                faculty = random.choice(available_faculty)
-                daily_schedule.append(f"{subject} - {faculty}")
+                if available_faculty:  # Check if there are available faculty members
+                    faculty = random.choice(available_faculty)
+                    daily_schedule.append(f"{subject} - {faculty}")
 
-                used_faculty.add(faculty)
-                used_subjects.add(subject)
-                current_datetime += timedelta(minutes=60)
-                classes_added += 1
-            else:
-                daily_schedule.append("Free")
-                
-            # Reset if all subjects or faculty are used up
-            if len(used_subjects) == len(subjects):
-                used_subjects.clear()
-            if len(used_faculty) == len(faculty_members[subject]):
-                used_faculty.clear()
+                    used_faculty.add(faculty)
+                    used_subjects.add(subject)
+                    current_datetime += timedelta(minutes=60)  # Each class takes 1 hour
+                    classes_added += 1
+                else:
+                    # If no faculty available for selected subject, mark this slot as "Free"
+                    daily_schedule.append("Free")
 
-            # Stop if we reach end time
-            if current_datetime.time() >= end_time:
-                break
+                # Stop if we reach end time
+                if current_datetime.time() >= end_time:
+                    break
 
         # Fill the rest of the day with "Free" if not enough classes were added
         while len(daily_schedule) < num_classes:
             daily_schedule.append("Free")
-
-        # Debug: Print daily schedule to check its length
-        print(f"Day {day + 1} schedule: {daily_schedule}")  # Print the daily schedule
 
         timetable.append(daily_schedule)
 
@@ -84,64 +76,39 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, start_t
     else:
         raise ValueError("Not all days have the same number of classes")
 
+# Streamlit UI
+st.title("Timetable Generator")
+group_name = st.sidebar.text_input("Group Name")
+num_sections = st.sidebar.number_input("Number of Sections", min_value=1, value=1)
+num_classes_per_day = 5  # Fixed number of classes in a day
+num_days = 6  # Fixed number of days in a week
+subjects = st.sidebar.text_input("Subjects (comma-separated)").split(",")
+faculty_input = st.sidebar.text_area("Faculty Members (comma-separated per subject; e.g., 'Subject1: Faculty1, Faculty2; Subject2: Faculty3, Faculty4')")
 
+# Parse faculty members input
+faculty_members = {}
+if faculty_input:
+    for entry in faculty_input.split(';'):
+        subject, faculty_list = entry.split(':')
+        faculty_members[subject.strip()] = [fac.strip() for fac in faculty_list.split(',')]
 
+# Timings
+start_time = st.sidebar.time_input("College Start Time", value=datetime.strptime("09:00", "%H:%M").time())
+end_time = st.sidebar.time_input("College End Time", value=datetime.strptime("17:00", "%H:%M").time())
+morning_break_time = st.sidebar.time_input("Morning Break Time", value=datetime.strptime("10:30", "%H:%M").time())
+afternoon_break_time = st.sidebar.time_input("Afternoon Break Time", value=datetime.strptime("13:00", "%H:%M").time())
 
-# Streamlit UI code
-st.title("College Timetable Generator")
+if st.button("Generate Timetables"):
+    all_timetables = {}
+    for section in range(num_sections):
+        timetable_df = generate_timetable(num_classes_per_day, num_days, subjects, faculty_members, start_time, end_time, morning_break_time, afternoon_break_time)
+        all_timetables[f"Section {section + 1}"] = timetable_df
 
-# Get user input for basic settings
-num_days = st.sidebar.number_input("Enter number of days (6 for Mon-Sat)", min_value=1, max_value=6, value=6)
-num_classes = st.sidebar.number_input("Enter number of classes per day", min_value=1, max_value=10, value=8)
+    # Display the timetables
+    for section, timetable in all_timetables.items():
+        st.subheader(section)
+        st.dataframe(timetable)
 
-# Input start and end times for college day
-start_time = st.sidebar.time_input("College Start Time", value=time(9, 0))
-end_time = st.sidebar.time_input("College End Time", value=time(17, 0))
-
-# Input break times
-morning_break_time = st.sidebar.time_input("Morning Break Time", value=time(11, 0))
-afternoon_break_time = st.sidebar.time_input("Lunch Break Time", value=time(13, 0))
-
-# **Faculty and Subject Input Options**
-
-# Option 1: Using individual inputs
-subjects = {}
-st.subheader("Enter Subjects and Faculty")
-
-num_subjects = st.sidebar.number_input("Enter the number of subjects", min_value=1, max_value=10, value=5)
-
-for i in range(num_subjects):
-    subject_name = st.text_input(f"Subject {i + 1} Name", key=f"subject_{i}")
-    faculty_1 = st.text_input(f"Faculty 1 for {subject_name}", key=f"faculty1_{i}")
-    faculty_2 = st.text_input(f"Faculty 2 for {subject_name}", key=f"faculty2_{i}")
-    subjects[subject_name] = [faculty_1, faculty_2]
-
-# Option 2: Using bulk input (uncomment to use)
-# st.subheader("Bulk Entry for Subjects and Faculty")
-# st.write("Enter subjects and faculty in the following format:")
-# st.code("Subject Name - Faculty1, Faculty2\nExample:\nMath - John Doe, Jane Doe")
-# bulk_input = st.text_area("Enter Subjects and Faculty Members (one per line)")
-# if bulk_input:
-#     subjects = {}
-#     lines = bulk_input.split('\n')
-#     for line in lines:
-#         if '-' in line:
-#             subject, faculty_str = line.split('-')
-#             subject = subject.strip()
-#             faculty_list = [name.strip() for name in faculty_str.split(',')]
-#             subjects[subject] = faculty_list
-
-# Input lab sessions
-lab_sessions = [st.checkbox(f"Lab session on Day {i + 1}") for i in range(num_days)]
-
-# Generate the timetable
-if st.button("Generate Timetable"):
-    timetable_df = generate_timetable(
-        num_classes, num_days, list(subjects.keys()), subjects, 
-        start_time, end_time, morning_break_time, afternoon_break_time, lab_sessions
-    )
-    st.subheader("Generated Timetable")
-    st.dataframe(timetable_df)
 
     # Export to PDF
     if st.button("Export to PDF"):
