@@ -9,6 +9,11 @@ from reportlab.lib.pagesizes import A4
 
 # Function to generate the timetable
 def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=8, lab_sessions=3):
+    # Check if subjects are provided
+    if not subjects or all(subj == "" for subj in subjects):
+        st.error("Please enter at least one subject.")
+        return pd.DataFrame()
+
     # Calculate total break duration
     total_break_duration = sum(break_duration for _, break_duration in breaks)
     
@@ -45,7 +50,12 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
             if current_time >= end_datetime:
                 break
             
-            subject = random.choice([subj for subj in subjects if subj not in used_subjects])
+            # Choose a subject that hasn't been used yet
+            available_subjects = [subj for subj in subjects if subj not in used_subjects]
+            if not available_subjects:
+                break  # No more unique subjects to assign
+
+            subject = random.choice(available_subjects)
             faculty = random.choice([fac for fac in faculty_members[subject] if fac not in used_faculty])
             timetable[day].append({"Time": current_time.strftime("%I:%M %p"), "Subject": subject, "Faculty": faculty})
             used_subjects.add(subject)
@@ -174,24 +184,9 @@ if st.button("Generate Timetable"):
             # Button to export the timetable to PDF
             if st.button("Export to PDF"):
                 pdf_buffer = export_to_pdf(timetable_df)
-                st.download_button("Download PDF", pdf_buffer, "timetable.pdf", "application/pdf")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                st.download_button(
+                    label="Download PDF",
+                    data=pdf_buffer,
+                    file_name="timetable.pdf",
+                    mime="application/pdf"
+                )
