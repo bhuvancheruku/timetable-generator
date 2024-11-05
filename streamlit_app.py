@@ -1,4 +1,3 @@
-pip install reportlab
 import streamlit as st
 import pandas as pd
 import random
