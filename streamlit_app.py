@@ -51,7 +51,7 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
                 # Assign subjects ensuring no repetition and no faculty overlap
                 for subject in shuffled_subjects:
                     if subject not in assigned_subjects:
-                        available_faculty_for_subject = available_faculty[subject] - faculty_usage[section][day]
+                        available_faculty_for_subject = set(available_faculty[subject]) - faculty_usage[section][day]
                         if available_faculty_for_subject:
                             faculty = random.choice(list(available_faculty_for_subject))
                             faculty_usage[section][day].add(faculty)
