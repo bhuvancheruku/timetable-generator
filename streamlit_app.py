@@ -7,7 +7,6 @@ from datetime import datetime, timedelta, time
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
-# Define the timetable generation function
 def generate_timetable(num_classes, num_days, subjects, faculty_members, start_time, end_time, morning_break_time, afternoon_break_time, lab_sessions):
     timetable = []
     for day in range(num_days):
@@ -44,13 +43,18 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, start_t
 
             # Choose a subject and faculty ensuring no overlaps
             subject = random.choice([subj for subj in subjects if subj not in used_subjects])
-            faculty = random.choice([fac for fac in faculty_members[subject] if fac not in used_faculty])
-            daily_schedule.append(f"{subject} - {faculty}")
+            available_faculty = [fac for fac in faculty_members[subject] if fac not in used_faculty]
 
-            used_faculty.add(faculty)
-            used_subjects.add(subject)
-            current_datetime += timedelta(minutes=60)
-            classes_added += 1
+            if available_faculty:  # Check if there are available faculty members
+                faculty = random.choice(available_faculty)
+                daily_schedule.append(f"{subject} - {faculty}")
+
+                used_faculty.add(faculty)
+                used_subjects.add(subject)
+                current_datetime += timedelta(minutes=60)
+                classes_added += 1
+            else:
+                st.warning(f"No available faculty for subject {subject}. Skipping this class.")
 
             # Reset if all subjects or faculty are used up
             if len(used_subjects) == len(subjects):
@@ -67,6 +71,7 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, start_t
     # Create DataFrame for easier viewing and PDF export
     columns = [f"Class {i + 1}" for i in range(num_classes)]
     return pd.DataFrame(timetable, columns=columns)
+
 
 # Streamlit UI code
 st.title("College Timetable Generator")
