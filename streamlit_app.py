@@ -35,21 +35,20 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
     for section in timetables:
         for day in days:
             used_faculty = set()
-
+            random.shuffle(subjects)  # Shuffle subjects for randomness
             for time_slot in time_slots:
                 if time_slot[1] == "BREAK":
                     timetables[section][day].append((time_slot, "BREAK", ""))
                     continue
                 
-                subject = random.choice(subjects)
-                available_faculty = [fac for fac in faculty_members[subject] if fac not in used_faculty]
-                if not available_faculty:
-                    timetables[section][day].append((time_slot, subject, "No Faculty Available"))
-                    continue
-                
-                faculty = random.choice(available_faculty)
-                used_faculty.add(faculty)
-                timetables[section][day].append((time_slot, subject, faculty))
+                # Pick the next subject for the day without faculty overlap
+                for subject in subjects:
+                    available_faculty = [fac for fac in faculty_members[subject] if fac not in used_faculty]
+                    if available_faculty:
+                        faculty = random.choice(available_faculty)
+                        used_faculty.add(faculty)
+                        timetables[section][day].append((time_slot, subject, faculty))
+                        break  # Break after assigning one subject per time slot
 
     return timetables, time_slots
 
