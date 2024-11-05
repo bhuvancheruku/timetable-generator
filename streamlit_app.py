@@ -1,12 +1,13 @@
 import streamlit as st
 import pandas as pd
 import random
-from datetime import timedelta, time
+from datetime import timedelta, datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 import tempfile
 
-# Function to generate timetable
+from datetime import datetime, timedelta
+
 def generate_timetable(num_classes, num_days, subjects, faculty_members, morning_break_time, afternoon_break_time, lab_sessions):
     timetable = []
     for day in range(num_days):
@@ -14,21 +15,21 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, morning
         used_faculty = set()
         used_subjects = set()
         
-        # Set start time
-        current_time = start_time
+        # Convert start_time to a datetime object for accurate time manipulation
+        current_datetime = datetime.combine(datetime.today(), start_time)
         classes_added = 0
 
         while classes_added < num_classes:
             # Check for morning break
-            if current_time == morning_break_time:
+            if current_datetime.time() == morning_break_time:
                 daily_schedule.append("Break (10 mins)")
-                current_time += timedelta(minutes=morning_break_duration)
+                current_datetime += timedelta(minutes=morning_break_duration)
                 continue
 
             # Check for afternoon break
-            if current_time == afternoon_break_time:
+            if current_datetime.time() == afternoon_break_time:
                 daily_schedule.append("Lunch Break (1 hr)")
-                current_time += timedelta(minutes=afternoon_break_duration)
+                current_datetime += timedelta(minutes=afternoon_break_duration)
                 continue
 
             # Check if lab session should be added
@@ -38,7 +39,7 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, morning
                 daily_schedule.append(f"Lab - {lab_subject} ({lab_faculty})")
                 used_faculty.add(lab_faculty)
                 used_subjects.add(lab_subject)
-                current_time += timedelta(minutes=class_duration)
+                current_datetime += timedelta(minutes=class_duration)
                 classes_added += 1
                 continue
 
@@ -50,7 +51,7 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, morning
             # Update sets to avoid overlap
             used_faculty.add(faculty)
             used_subjects.add(subject)
-            current_time += timedelta(minutes=class_duration)
+            current_datetime += timedelta(minutes=class_duration)
             classes_added += 1
 
             # Reset if all subjects or faculty are used up
@@ -60,7 +61,7 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, morning
                 used_faculty.clear()
 
             # Stop if we reach end time
-            if current_time >= end_time:
+            if current_datetime.time() >= end_time:
                 break
 
         timetable.append(daily_schedule)
@@ -68,7 +69,7 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, morning
     # Create DataFrame for easier viewing and PDF export
     columns = [f"Class {i + 1}" for i in range(num_classes)]
     return pd.DataFrame(timetable, columns=columns)
-
+    
 # PDF export function
 def export_to_pdf(timetable_df):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
