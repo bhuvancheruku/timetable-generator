@@ -70,11 +70,20 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, start_t
         while len(daily_schedule) < num_classes:
             daily_schedule.append("Free")
 
+        # Debug: Print daily schedule to check its length
+        print(f"Day {day + 1} schedule: {daily_schedule}")  # Print the daily schedule
+
         timetable.append(daily_schedule)
 
     # Create DataFrame for easier viewing and PDF export
     columns = [f"Class {i + 1}" for i in range(num_classes)]
-    return pd.DataFrame(timetable, columns=columns)
+    
+    # Ensure all days have the same number of classes
+    if all(len(day) == num_classes for day in timetable):
+        return pd.DataFrame(timetable, columns=columns)
+    else:
+        raise ValueError("Not all days have the same number of classes")
+
 
 
 
