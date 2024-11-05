@@ -1,8 +1,8 @@
+from datetime import time, datetime, timedelta
 import tempfile
 import random
 import streamlit as st
 import pandas as pd
-from datetime import time, timedelta
 import io
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
@@ -33,13 +33,16 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
 
     timetable = {day: [] for day in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]}
     
+    # Convert start_time and end_time to datetime for calculations
+    current_time = datetime.combine(datetime.today(), start_time)
+    end_datetime = datetime.combine(datetime.today(), end_time)
+    
     for day in timetable:
         used_subjects = set()
         used_faculty = set()
-        current_time = start_time
         
         for _ in range(num_classes):
-            if current_time >= end_time:
+            if current_time >= end_datetime:
                 break
             
             subject = random.choice([subj for subj in subjects if subj not in used_subjects])
@@ -47,8 +50,8 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
             timetable[day].append({"Time": current_time.strftime("%I:%M %p"), "Subject": subject, "Faculty": faculty})
             used_subjects.add(subject)
             used_faculty.add(faculty)
-            current_time += timedelta(minutes=class_duration)
-        
+            current_time += timedelta(minutes=class_duration)  # Add class duration here
+            
         # Adding breaks
         for break_time in breaks:
             timetable[day].append({"Time": break_time[0].strftime("%I:%M %p"), "Subject": "Break", "Faculty": ""})
@@ -100,7 +103,6 @@ no_break = st.sidebar.checkbox("No Break Present")
 no_lunch_break = st.sidebar.checkbox("No Lunch Break Present")
 
 if not no_break:
-    num_breaks = st.sidebar.number_input("Number of Breaks", min_value=0, max_value=2, value=1)
     breaks = []  # Initialize breaks as an empty list
 
 # Collect break timings and durations from user input
@@ -113,7 +115,6 @@ if st.sidebar.checkbox("Add Lunch Break"):
     lunch_break_time = st.sidebar.time_input("Lunch Break Time", value=time(13, 0))
     lunch_break_duration = st.sidebar.number_input("Lunch Break Duration (minutes)", min_value=1, value=60)
     breaks.append((lunch_break_time, lunch_break_duration))
-
 
 # Manual input for subjects and faculty
 num_subjects = st.sidebar.number_input("Number of Subjects", min_value=1, value=5)
@@ -173,6 +174,7 @@ if st.button("Generate Timetable"):
             # Button to export the timetable to PDF
             if st.button("Export to PDF"):
                 pdf_buffer = export_to_pdf(timetable_df)
+                st.download_button("Download PDF", pdf_buffer, "timetable.pdf", "application/pdf")
 
 
 
