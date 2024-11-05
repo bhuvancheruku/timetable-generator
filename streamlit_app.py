@@ -1,10 +1,8 @@
-from datetime import time
 import tempfile
 import random
 import streamlit as st
 import pandas as pd
 from datetime import time, timedelta
-import random
 import io
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
