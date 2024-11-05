@@ -9,6 +9,11 @@ from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
 
 # Ensure session state variables are initialize
+# Ensure session state variables are initialized
+if "subjects" not in st.session_state:
+    st.session_state.subjects = []
+if "faculty_members" not in st.session_state:
+    st.session_state.faculty_members = {}
 
 # Function to generate the timetable for one section
 def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=8, lab_sessions=3):
