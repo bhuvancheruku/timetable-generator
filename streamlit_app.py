@@ -3,10 +3,11 @@ import tempfile
 import random
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta, time
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
+from datetime import time, timedelta
+import random
 import io
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
 
 # Function to generate the timetable
 def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=8, lab_sessions=3):
@@ -45,14 +46,14 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
             
             subject = random.choice([subj for subj in subjects if subj not in used_subjects])
             faculty = random.choice([fac for fac in faculty_members[subject] if fac not in used_faculty])
-            timetable[day].append({"Time": current_time.strftime("%H:%M"), "Subject": subject, "Faculty": faculty})
+            timetable[day].append({"Time": current_time.strftime("%I:%M %p"), "Subject": subject, "Faculty": faculty})
             used_subjects.add(subject)
             used_faculty.add(faculty)
             current_time += timedelta(minutes=class_duration)
         
         # Adding breaks
         for break_time in breaks:
-            timetable[day].append({"Time": break_time[0].strftime("%H:%M"), "Subject": "Break", "Faculty": ""})
+            timetable[day].append({"Time": break_time[0].strftime("%I:%M %p"), "Subject": "Break", "Faculty": ""})
             current_time += timedelta(minutes=break_time[1])
     
     # Add lab sessions
@@ -82,28 +83,42 @@ def export_to_pdf(timetable_df):
 st.title("Timetable Generator")
 
 # Sidebar inputs for college timings
-start_hour = st.sidebar.number_input("College Start Hour", min_value=1, max_value=12, value=9)
-start_minute = st.sidebar.number_input("College Start Minute", min_value=0, max_value=59, value=0)
-start_am_pm = st.sidebar.radio("Select AM/PM for Start Time", ["AM", "PM"])
+start_time_hour = st.sidebar.number_input("College Start Hour", min_value=1, max_value=12, value=9)
+start_time_minute = st.sidebar.number_input("College Start Minute", min_value=0, max_value=59, value=0)
+start_time_am_pm = st.sidebar.radio("Start Time AM/PM", options=["AM", "PM"])
+start_time = time(start_time_hour % 12 + (12 if start_time_am_pm == "PM" else 0), start_time_minute)
 
-end_hour = st.sidebar.number_input("College End Hour", min_value=1, max_value=12, value=5)
-end_minute = st.sidebar.number_input("College End Minute", min_value=0, max_value=59, value=0)
-end_am_pm = st.sidebar.radio("Select AM/PM for End Time", ["AM", "PM"])
-
-# Convert to 24-hour format
-start_time = time(start_hour + (12 if start_am_pm == "PM" and start_hour < 12 else 0),
-                  start_minute)
-end_time = time(end_hour + (12 if end_am_pm == "PM" and end_hour < 12 else 0),
-                end_minute)
-
-# Break timings input
-morning_break_duration = st.sidebar.number_input("Morning Break Duration (minutes)", min_value=1, value=10)
-lunch_break_duration = st.sidebar.number_input("Lunch Break Duration (minutes)", min_value=1, value=60)
-breaks = [(time(11, 0), morning_break_duration), (time(13, 0), lunch_break_duration)]
+end_time_hour = st.sidebar.number_input("College End Hour", min_value=1, max_value=12, value=5)
+end_time_minute = st.sidebar.number_input("College End Minute", min_value=0, max_value=59, value=0)
+end_time_am_pm = st.sidebar.radio("End Time AM/PM", options=["AM", "PM"])
+end_time = time(end_time_hour % 12 + (12 if end_time_am_pm == "PM" else 0), end_time_minute)
 
 # Group name and number of sections
 group_name = st.sidebar.text_input("Group Name")
 num_sections = st.sidebar.number_input("Number of Sections", min_value=1, value=1)
+
+# Manual input for breaks
+no_break = st.sidebar.checkbox("No Break Present")
+no_lunch_break = st.sidebar.checkbox("No Lunch Break Present")
+
+if not no_break:
+    num_breaks = st.sidebar.number_input("Number of Breaks", min_value=0, max_value=2, value=1)
+    breaks = []
+    for i in range(num_breaks):
+        break_hour = st.sidebar.number_input(f"Break {i + 1} Hour", min_value=1, max_value=12, value=11)
+        break_minute = st.sidebar.number_input(f"Break {i + 1} Minute", min_value=0, max_value=59, value=0)
+        break_am_pm = st.sidebar.radio(f"Break {i + 1} AM/PM", options=["AM", "PM"], key=f"break_am_pm_{i}")
+        break_duration = st.sidebar.number_input(f"Break {i + 1} Duration (minutes)", min_value=1, value=10)
+        break_time = time(break_hour % 12 + (12 if break_am_pm == "PM" else 0), break_minute)
+        breaks.append((break_time, break_duration))
+
+if not no_lunch_break:
+    lunch_break_hour = st.sidebar.number_input("Lunch Break Hour", min_value=1, max_value=12, value=1)
+    lunch_break_minute = st.sidebar.number_input("Lunch Break Minute", min_value=0, max_value=59, value=0)
+    lunch_break_am_pm = st.sidebar.radio("Lunch Break AM/PM", options=["AM", "PM"])
+    lunch_break_duration = st.sidebar.number_input("Lunch Break Duration (minutes)", min_value=1, value=60)
+    lunch_time = time(lunch_break_hour % 12 + (12 if lunch_break_am_pm == "PM" else 0), lunch_break_minute)
+    breaks.append((lunch_time, lunch_break_duration))
 
 # Manual input for subjects and faculty
 num_subjects = st.sidebar.number_input("Number of Subjects", min_value=1, value=5)
@@ -162,8 +177,8 @@ if st.button("Generate Timetable"):
 
             # Button to export the timetable to PDF
             if st.button("Export to PDF"):
-                pdf_buffer = export_to_pdf(timetable_df)
-                st.download_button("Download PDF", pdf_buffer, "timetable.pdf", "application/pdf")
+                pdf_buffer = export_to_pdf(timetable_df
+
 
 
 
