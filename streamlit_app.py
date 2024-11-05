@@ -7,99 +7,92 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
 # Function to generate the timetable
-def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=5, lab_sessions=3, half_day=False):
-    # Check for required inputs
-    if not start_time or not end_time:
-        st.warning("Please specify both the start and end time.")
-        return pd.DataFrame()
-
-    if not subjects:
-        st.warning("Please enter at least one subject.")
-        return pd.DataFrame()
-
-    if not faculty_members or any(subject not in faculty_members for subject in subjects):
-        st.warning("Please provide faculty members for each subject.")
-        return pd.DataFrame()
-
-    if not breaks and not half_day:
-        st.warning("Please specify break times and durations.")
-        return pd.DataFrame()
-
-    # Calculate total break duration
-    total_break_duration = sum(break_duration for _, break_duration in breaks if not half_day)
+def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=5, num_sections=1, half_day=False):
+    # Initialize the timetable structure with days and sections
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    timetables = {f"Section {i+1}": {day: [] for day in days} for i in range(num_sections)}
     
     today = datetime.now().date()
     start_datetime = datetime.combine(today, start_time)
     end_datetime = datetime.combine(today, end_time)
 
-    if end_datetime <= start_datetime:
-        st.warning("End time must be later than start time.")
-        return pd.DataFrame()
+    # Calculate total available time minus breaks
+    total_minutes = (end_datetime - start_datetime).total_seconds() / 60 - sum(break[1] for break in breaks)
+    class_duration = total_minutes // num_classes
 
-    total_available_minutes = (end_datetime - start_datetime).total_seconds() / 60 - total_break_duration
-    if total_available_minutes <= 0 or num_classes <= 0:
-        st.warning("Insufficient time available for the classes.")
-        return pd.DataFrame()
-
-    class_duration = total_available_minutes // num_classes
-    if class_duration <= 0:
-        st.warning("Class duration must be greater than zero.")
-        return pd.DataFrame()
-
-    # Timetable dictionary with days as rows and timings as columns
-    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    timetable = {day: {f"Class {i+1}": None for i in range(num_classes)} for day in days}
+    # Generate time slots
     time_slots = []
     current_time = start_datetime
-
-    # Generate time slots for each class period
     for _ in range(num_classes):
-        time_slots.append(current_time.strftime("%I:%M %p"))
-        current_time += timedelta(minutes=class_duration)
-    
-    # Add breaks to time slots if not half-day
+        end_time = current_time + timedelta(minutes=class_duration)
+        time_slots.append((current_time.strftime("%I:%M %p"), end_time.strftime("%I:%M %p")))
+        current_time = end_time
+
+    # Include breaks in time slots
     if not half_day:
         for break_time, duration in breaks:
-            break_slot = break_time.strftime("%I:%M %p")
-            if break_slot not in time_slots:
-                time_slots.append(break_slot)
+            time_slots.append((break_time.strftime("%I:%M %p"), "BREAK"))
 
-    time_slots = sorted(set(time_slots))  # Sort time slots for proper ordering
+    # Sort and structure the time slots
+    time_slots = sorted(set(time_slots))
 
-    # Fill the timetable with subjects and faculty for each day
-    for day in days:
-        used_subjects = set()
-        used_faculty = set()
+    # Fill the timetable with subjects and faculty for each section
+    for section in timetables:
+        for day in days:
+            used_faculty = set()
 
-        for time_slot in time_slots:
-            if time_slot in timetable[day].values():
-                continue  # Skip if this time slot is already filled
-
-            if len(used_subjects) < len(subjects):
-                subject = random.choice([subj for subj in subjects if subj not in used_subjects])
-                faculty = random.choice([fac for fac in faculty_members[subject] if fac not in used_faculty])
-                timetable[day][time_slot] = {"Subject": subject, "Faculty": faculty}
-                used_subjects.add(subject)
+            for time_slot in time_slots:
+                if time_slot[1] == "BREAK":
+                    timetables[section][day].append((time_slot, "BREAK", ""))
+                    continue
+                
+                # Randomly select subject and ensure no faculty overlaps
+                subject = random.choice(subjects)
+                available_faculty = [fac for fac in faculty_members[subject] if fac not in used_faculty]
+                if not available_faculty:
+                    timetables[section][day].append((time_slot, subject, "No Faculty Available"))
+                    continue
+                
+                faculty = random.choice(available_faculty)
                 used_faculty.add(faculty)
+                
+                # Store in the timetable
+                timetables[section][day].append((time_slot, subject, faculty))
 
-    return pd.DataFrame(timetable)
+    return timetables, time_slots
 
-# Function to export the timetable as a PDF
-def export_to_pdf(timetable_df):
+# Function to export timetable as PDF
+def export_to_pdf(timetables, time_slots):
     buffer = io.BytesIO()
     pdf_canvas = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
-    pdf_canvas.setFont("Helvetica", 12)
+    pdf_canvas.setFont("Helvetica", 10)
 
-    for i, day in enumerate(timetable_df.index):
-        pdf_canvas.drawString(100, height - 50 - (i * 100), f"Timetable for {day}")
-        y = height - 70 - (i * 100)
-        
-        for j, (time_slot, data) in enumerate(timetable_df.loc[day].items()):
-            if data is not None:
-                subject = data['Subject']
-                faculty = data['Faculty']
-                pdf_canvas.drawString(100, y - (j * 20), f"{time_slot}: {subject} by {faculty}")
+    start_x, start_y = 50, height - 40
+    row_height = 20
+
+    for section, timetable in timetables.items():
+        pdf_canvas.drawString(start_x, start_y, f"Timetable for {section}")
+        start_y -= 30
+
+        # Draw header row with time slots
+        pdf_canvas.drawString(start_x, start_y, "Day")
+        for i, (start, end) in enumerate(time_slots):
+            slot_text = f"{start} - {end}" if end != "BREAK" else "BREAK"
+            pdf_canvas.drawString(start_x + 100 + i * 100, start_y, slot_text)
+
+        # Populate each day with classes
+        for day, classes in timetable.items():
+            start_y -= row_height
+            pdf_canvas.drawString(start_x, start_y, day)
+
+            for i, (time_slot, subject, faculty) in enumerate(classes):
+                class_text = f"{subject} - {faculty}" if subject != "BREAK" else "BREAK"
+                pdf_canvas.drawString(start_x + 100 + i * 100, start_y, class_text)
+
+            start_y -= 10
+
+        start_y -= 40
 
     pdf_canvas.save()
     buffer.seek(0)
@@ -109,29 +102,13 @@ def export_to_pdf(timetable_df):
 st.title("Timetable Generator")
 
 # Sidebar inputs for college timings
-start_time_hour = st.sidebar.number_input("College Start Hour", min_value=1, max_value=12, value=9)
-start_time_minute = st.sidebar.number_input("College Start Minute", min_value=0, max_value=59, value=0)
-start_time_am_pm = st.sidebar.radio("Start Time AM/PM", options=["AM", "PM"])
-start_time = datetime.strptime(f"{start_time_hour}:{start_time_minute} {start_time_am_pm}", "%I:%M %p").time()
-
-end_time_hour = st.sidebar.number_input("College End Hour", min_value=1, max_value=12, value=5)
-end_time_minute = st.sidebar.number_input("College End Minute", min_value=0, max_value=59, value=0)
-end_time_am_pm = st.sidebar.radio("End Time AM/PM", options=["AM", "PM"])
-end_time = datetime.strptime(f"{end_time_hour}:{end_time_minute} {end_time_am_pm}", "%I:%M %p").time()
-
-# Group name and number of sections
+start_time = st.sidebar.time_input("College Start Time", value=datetime.strptime("09:00 AM", "%I:%M %p").time())
+end_time = st.sidebar.time_input("College End Time", value=datetime.strptime("03:00 PM", "%I:%M %p").time())
 group_name = st.sidebar.text_input("Group Name")
 num_sections = st.sidebar.number_input("Number of Sections", min_value=1, value=1)
 
-# Manual input for breaks
-no_break = st.sidebar.checkbox("No Break Present")
-no_lunch_break = st.sidebar.checkbox("No Lunch Break Present")
-
-breaks = []  # Initialize breaks as an empty list
-if not no_break:
-    num_breaks = st.sidebar.number_input("Number of Breaks", min_value=0, max_value=2, value=1)
-
-# Collect break timings and durations from user input
+# Break configuration
+breaks = []
 if st.sidebar.checkbox("Add Morning Break"):
     morning_break_time = st.sidebar.time_input("Morning Break Time", value=datetime.strptime("11:00 AM", "%I:%M %p").time())
     morning_break_duration = st.sidebar.number_input("Morning Break Duration (minutes)", min_value=1, value=10)
@@ -142,67 +119,27 @@ if st.sidebar.checkbox("Add Lunch Break"):
     lunch_break_duration = st.sidebar.number_input("Lunch Break Duration (minutes)", min_value=1, value=60)
     breaks.append((lunch_break_time, lunch_break_duration))
 
-# Manual input for subjects and faculty
+# Subjects and faculty inputs
 num_subjects = st.sidebar.number_input("Number of Subjects", min_value=1, value=5)
-if "subjects" not in st.session_state:
-    st.session_state.subjects = []
-if "faculty_members" not in st.session_state:
-    st.session_state.faculty_members = {}
+subjects = []
+faculty_members = {}
 
-# Manage subject and faculty inputs
 for i in range(num_subjects):
-    if i >= len(st.session_state.subjects):
-        st.session_state.subjects.append("")  # Append empty string for new subjects
-
-    subject_name = st.sidebar.text_input(f"Subject Name {i + 1}", value=st.session_state.subjects[i])
-    
-    # Store the subject name
-    if subject_name:
-        st.session_state.subjects[i] = subject_name
-    
-    # Initialize faculty members for the subject
-    if subject_name not in st.session_state.faculty_members:
-        st.session_state.faculty_members[subject_name] = []
-
-    # Set min value to 1 and default to 1 if no faculty is present
-    num_faculty = st.sidebar.number_input(
-        f"Number of Faculty for {subject_name}",
-        min_value=1,
-        value=max(1, len(st.session_state.faculty_members[subject_name])),  # Ensure at least 1
-        key=f"faculty_count_{i}"
-    )
-    
-    faculty_list = []
-    for j in range(num_faculty):
-        if j >= len(st.session_state.faculty_members[subject_name]):
-            st.session_state.faculty_members[subject_name].append("")  # Append empty string for new faculty members
-
-        faculty_name = st.sidebar.text_input(
-            f"Faculty Name {j + 1} for {subject_name}",
-            value=st.session_state.faculty_members[subject_name][j],
-            key=f"faculty_{i}_{j}"
-        )
-        
-        faculty_list.append(faculty_name)
-
-    if subject_name:
-        st.session_state.faculty_members[subject_name] = faculty_list
+    subject = st.sidebar.text_input(f"Subject {i + 1}")
+    if subject:
+        subjects.append(subject)
+        num_faculty = st.sidebar.number_input(f"Number of Faculty for {subject}", min_value=1, value=1)
+        faculty = [st.sidebar.text_input(f"Faculty {j + 1} for {subject}") for j in range(num_faculty)]
+        faculty_members[subject] = faculty
 
 # Generate timetable button
 if st.button("Generate Timetable"):
-    if not group_name:
-        st.error("Please enter a group name.")
-    else:
-        timetable_df = generate_timetable(start_time, end_time, st.session_state.subjects, st.session_state.faculty_members, breaks)
-        if not timetable_df.empty:
-            st.write(timetable_df)
+    timetable_data, time_slots = generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=5, num_sections=num_sections)
+    for section, timetable in timetable_data.items():
+        st.write(f"### {section}")
+        st.dataframe(pd.DataFrame(timetable))
 
-            # Button to export the timetable to PDF
-            if st.button("Export to PDF"):
-                pdf_buffer = export_to_pdf(timetable_df)
-                st.download_button(
-                    label="Download Timetable PDF",
-                    data=pdf_buffer,
-                    file_name="timetable.pdf",
-                    mime="application/pdf"
-                )
+    # Button to export timetable to PDF
+    if st.button("Export to PDF"):
+        pdf_buffer = export_to_pdf(timetable_data, time_slots)
+        st.download_button("Download Timetable PDF", data=pdf_buffer, file_name="timetable.pdf", mime="application/pdf")
