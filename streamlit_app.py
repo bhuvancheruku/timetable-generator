@@ -117,26 +117,31 @@ if "subjects" not in st.session_state:
 if "faculty_members" not in st.session_state:
     st.session_state.faculty_members = {}
 
-# Manage subject and faculty inputs
+# Manage subject and faculty inputs with unique keys
 for i in range(num_subjects):
-    if i >= len(st.session_state.subjects):
-        st.session_state.subjects.append("")  # Append empty string for new subjects
-
-    subject_name = st.sidebar.text_input(f"Subject Name {i + 1}", value=st.session_state.subjects[i])
+    # Ensure each subject input has a unique key
+    subject_name = st.sidebar.text_input(f"Subject Name {i + 1}", key=f"subject_name_{i}")
     
     if subject_name:
-        st.session_state.subjects[i] = subject_name
-    
-    if subject_name not in st.session_state.faculty_members:
-        st.session_state.faculty_members[subject_name] = []
+        # Update session state for subjects
+        if i < len(st.session_state.subjects):
+            st.session_state.subjects[i] = subject_name
+        else:
+            st.session_state.subjects.append(subject_name)
 
-    num_faculty = st.sidebar.number_input(f"Number of Faculty for {subject_name}", min_value=1, value=1)
-    faculty_list = []
-    for j in range(num_faculty):
-        faculty_name = st.sidebar.text_input(f"Faculty Name {j + 1} for {subject_name}")
-        faculty_list.append(faculty_name)
-
+    # Use subject name as key prefix for faculty entries to avoid duplicate IDs
     if subject_name:
+        num_faculty = st.sidebar.number_input(
+            f"Number of Faculty for {subject_name}", min_value=1, value=1, key=f"num_faculty_{subject_name}"
+        )
+        faculty_list = []
+        for j in range(num_faculty):
+            faculty_name = st.sidebar.text_input(
+                f"Faculty Name {j + 1} for {subject_name}", key=f"faculty_name_{subject_name}_{j}"
+            )
+            faculty_list.append(faculty_name)
+
+        # Update session state for faculty members
         st.session_state.faculty_members[subject_name] = faculty_list
 
 # Generate timetable button
