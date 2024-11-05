@@ -39,15 +39,18 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
                 if time_slot[1] == "BREAK":
                     timetables[section][day].append((time_slot, "BREAK", ""))
                     continue
-                
-                # Assign each subject for the current day
+
+                # Assign all subjects for the current day
                 for subject in subjects:
                     available_faculty = [fac for fac in faculty_members[subject] if fac not in used_faculty]
                     if available_faculty:
                         faculty = random.choice(available_faculty)
                         used_faculty.add(faculty)
                         timetables[section][day].append((time_slot, subject, faculty))
-                        break  # Break after assigning one subject per time slot
+                
+                # Ensure we do not exceed the number of classes available
+                if len(timetables[section][day]) >= num_classes:
+                    break  # Exit if we have assigned enough classes
 
     return timetables, time_slots
 
@@ -128,7 +131,7 @@ if st.button("Generate Timetable"):
         st.warning("Please ensure all subjects have at least one faculty member.")
     else:
         timetable_data, time_slots = generate_timetable(
-            start_time, end_time, subjects, faculty_members, breaks, num_classes=num_classes, num_sections=num_sections  # Use num_classes here
+            start_time, end_time, subjects, faculty_members, breaks, num_classes=num_classes, num_sections=num_sections
         )
         flat_timetable_df = pd.DataFrame([
             {"Section": section, "Day": day, "Time Slot": time_slot[0] + " - " + time_slot[1] if time_slot[1] != "BREAK" else "BREAK",
