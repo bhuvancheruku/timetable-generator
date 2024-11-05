@@ -8,15 +8,6 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 import io
 
-import pandas as pd
-import random
-from datetime import timedelta
-import io
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-import streamlit as st
-from datetime import time
-
 # Function to generate the timetable
 def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=8, lab_sessions=3):
     # Calculate total break duration
