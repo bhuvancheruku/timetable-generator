@@ -131,13 +131,32 @@ for i in range(num_subjects):
         num_faculty = st.sidebar.number_input(f"Number of Faculty for {subject}", min_value=1, value=1)
         faculty = [st.sidebar.text_input(f"Faculty {j + 1} for {subject}") for j in range(num_faculty)]
         faculty_members[subject] = faculty
-
-# Generate timetable button
-if st.button("Generate Timetable"):
-    timetable_data, time_slots = generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=5, num_sections=num_sections)
+ 
+# Flatten the timetable for display in Streamlit
+def flatten_timetable(timetable_data):
+    flattened_data = []
     for section, timetable in timetable_data.items():
-        st.write(f"### {section}")
-        st.dataframe(pd.DataFrame(timetable))
+        for day, classes in timetable.items():
+            for time_slot, subject, faculty in classes:
+                start_time, end_time = time_slot if time_slot[1] != "BREAK" else (time_slot[0], "BREAK")
+                flattened_data.append({
+                    "Section": section,
+                    "Day": day,
+                    "Start Time": start_time,
+                    "End Time": end_time,
+                    "Subject": subject,
+                    "Faculty": faculty if faculty != "" else "No Faculty"
+                })
+    return pd.DataFrame(flattened_data)
+
+# Generate timetable and flatten it
+if st.button("Generate Timetable"):
+    timetable_data, time_slots = generate_timetable(
+        start_time, end_time, subjects, faculty_members, breaks, num_classes=5, num_sections=num_sections
+    )
+    flat_timetable_df = flatten_timetable(timetable_data)
+    st.write("### Timetable")
+    st.dataframe(flat_timetable_df)  # Display the flattened timetable
 
     # Button to export timetable to PDF
     if st.button("Export to PDF"):
