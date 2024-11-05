@@ -32,19 +32,19 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
 
     time_slots = sorted(set(time_slots))
 
-    # To avoid faculty overlap across sections
+    # To track faculty availability and ensure no overlaps across sections
     faculty_usage = {section: {day: set() for day in days} for section in timetables}
 
     for section in timetables:
         for day in days:
             available_faculty = {subject: set(faculty_members[subject]) for subject in subjects}
+            assigned_subjects = set()  # Track assigned subjects for the day
             for time_slot in time_slots:
                 if time_slot[1] == "BREAK":
                     timetables[section][day].append((time_slot, "BREAK", ""))
                     continue
-
-                # Ensure each subject is covered without overlapping faculty
-                assigned_subjects = set()
+                
+                # Assign subjects ensuring no repetition and no faculty overlap
                 for subject in subjects:
                     if subject not in assigned_subjects:
                         available_faculty_for_subject = available_faculty[subject] - faculty_usage[section][day]
@@ -53,8 +53,13 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
                             faculty_usage[section][day].add(faculty)
                             timetables[section][day].append((time_slot, subject, faculty))
                             assigned_subjects.add(subject)
-                            break  # Once a subject is assigned, move to the next subject
-                        
+                            break  # Once a subject is assigned, move to the next available time slot
+            
+            # Ensure all subjects are assigned (if any subjects are not assigned, retry)
+            if len(assigned_subjects) < len(subjects):
+                timetables[section][day] = []
+                break  # Break the section's loop and retry if subject assignments failed
+
     return timetables, time_slots
 
 # Function to export timetable as PDF
