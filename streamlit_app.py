@@ -38,31 +38,33 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
     for section in timetables:
         for day in days:
             # Shuffle subjects and faculty for randomness
-            shuffled_subjects = random.sample(subjects, len(subjects))
+            shuffled_subjects = random.sample(subjects, len(subjects))  # Ensure no repetition of subjects
             available_faculty = {subject: list(faculty_members[subject]) for subject in shuffled_subjects}
 
             assigned_subjects = set()  # Track assigned subjects for the day
+            assigned_faculty = set()  # Track faculty already assigned to a class
 
+            # Iterate through time slots and assign subjects
             for time_slot in time_slots:
                 if time_slot[1] == "BREAK":
                     timetables[section][day].append((time_slot, "BREAK", ""))
                     continue
 
-                # Assign subjects ensuring no repetition and no faculty overlap
                 for subject in shuffled_subjects:
                     if subject not in assigned_subjects:
-                        available_faculty_for_subject = set(available_faculty[subject]) - faculty_usage[section][day]
+                        # Get available faculty for the subject that is not already assigned at this time
+                        available_faculty_for_subject = set(available_faculty[subject]) - assigned_faculty
                         if available_faculty_for_subject:
                             faculty = random.choice(list(available_faculty_for_subject))
-                            faculty_usage[section][day].add(faculty)
+                            assigned_faculty.add(faculty)
                             timetables[section][day].append((time_slot, subject, faculty))
                             assigned_subjects.add(subject)
                             break  # Once a subject is assigned, move to the next available time slot
 
-            # Ensure all subjects are assigned (if any subjects are not assigned, retry)
+            # Ensure all subjects are assigned
             if len(assigned_subjects) < len(subjects):
-                timetables[section][day] = []
-                break  # Break the section's loop and retry if subject assignments failed
+                timetables[section][day] = []  # If not all subjects were assigned, reset for retry
+                break  # Retry assigning subjects for this section
 
     return timetables, time_slots
 
@@ -165,4 +167,4 @@ if st.button("Generate Timetable"):
 if 'flat_timetable_df' in st.session_state:
     if st.button("Export to PDF"):
         pdf_buffer = export_to_pdf(st.session_state.timetable_data, st.session_state.time_slots)
-        st.download_button("Download Timetable PDF", data=pdf_buffer, file_name="timetable.pdf", mime="application/pdf")
+        st.download_button("Download Timetable PDF",
