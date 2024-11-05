@@ -99,7 +99,8 @@ for i in range(num_subjects):
     
     faculty_list = []
     for j in range(num_faculty):
-        faculty_name = st.sidebar.text_input(f"Faculty Name {j + 1} for {subject_name}", value=st.session_state.faculty_members.get(subject_name, [""])[j] if j < len(st.session_state.faculty_members.get(subject_name, [])) else "")
+        faculty_name = st.sidebar.text_input(f"Faculty Name {j + 1} for {subject_name}", value=st.session_state.faculty_members.get(subject_name, [""])[j] if j < len(st.session_state.faculty_members.get(subject_name, [])) else "", key=f"faculty_{i}_{j}")
+
         faculty_list.append(faculty_name)
 
     if subject_name:
@@ -124,6 +125,7 @@ if st.button("Generate Timetables"):
         st.dataframe(timetable)
 
     # Option to export to PDF can be added here
+
 
 
     # Export to PDF
