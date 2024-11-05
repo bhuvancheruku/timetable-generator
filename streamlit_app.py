@@ -89,6 +89,7 @@ def export_to_pdf(timetables, time_slots):
     doc.build(elements)
     buffer.seek(0)
     return buffer
+
 # Inside the Streamlit app
 if st.button("Generate Timetable"):
     timetable_data, time_slots = generate_timetable(
@@ -115,3 +116,4 @@ if 'flat_timetable_df' in st.session_state:
     if st.button("Export to PDF"):
         pdf_buffer = export_to_pdf(st.session_state.timetable_data, st.session_state.time_slots)
         st.download_button("Download Timetable PDF", data=pdf_buffer, file_name="timetable.pdf", mime="application/pdf")
+
