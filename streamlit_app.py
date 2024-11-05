@@ -94,17 +94,21 @@ for i in range(num_subjects):
     if subject_name:
         st.session_state.subjects[i] = subject_name
 
-    # Input number of faculty for this subject
-    num_faculty = st.sidebar.number_input(f"Number of Faculty for {subject_name}", min_value=1, value=1, key=f"faculty_count_{i}")
-    
-    # Initialize faculty list for the subject
-    if len(st.session_state.faculty_members[subject_name]) != num_faculty:
-        st.session_state.faculty_members[subject_name] = [""] * num_faculty
-    
-    # Input each faculty member's name for this subject
-    for j in range(num_faculty):
-        faculty_name = st.sidebar.text_input(f"Faculty Name {j + 1} for {subject_name}", value=st.session_state.faculty_members[subject_name][j], key=f"faculty_{i}_{j}")
-        st.session_state.faculty_members[subject_name][j] = faculty_name
+        # Initialize faculty members for the subject if not present in session state
+        if subject_name not in st.session_state.faculty_members:
+            st.session_state.faculty_members[subject_name] = []
+
+        # Input number of faculty for this subject
+        num_faculty = st.sidebar.number_input(f"Number of Faculty for {subject_name}", min_value=1, value=1, key=f"faculty_count_{i}")
+        
+        # Adjust the number of faculty members for this subject in session state
+        if len(st.session_state.faculty_members[subject_name]) != num_faculty:
+            st.session_state.faculty_members[subject_name] = [""] * num_faculty
+        
+        # Input each faculty member's name for this subject
+        for j in range(num_faculty):
+            faculty_name = st.sidebar.text_input(f"Faculty Name {j + 1} for {subject_name}", value=st.session_state.faculty_members[subject_name][j], key=f"faculty_{i}_{j}")
+            st.session_state.faculty_members[subject_name][j] = faculty_name
 
 # Break timings and durations
 breaks = []
