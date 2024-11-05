@@ -203,4 +203,6 @@ if st.button("Generate Timetable"):
                 st.download_button(
                     label="Download Timetable PDF",
                     data=pdf_buffer,
-                    file_name
+                    file_name="timetable.pdf",
+                    mime="application/pdf"
+                )
