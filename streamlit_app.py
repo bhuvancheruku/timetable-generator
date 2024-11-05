@@ -8,6 +8,12 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
 
+# Ensure session state variables are initialized
+if "subjects" not in st.session_state:
+    st.session_state.subjects = []
+if "faculty_members" not in st.session_state:
+    st.session_state.faculty_members = {}
+
 # Function to generate the timetable for one section
 def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=8, lab_sessions=3):
     total_break_duration = sum(break_duration for _, break_duration in breaks)
@@ -166,3 +172,4 @@ if st.button("Generate Timetables"):
         if st.button("Export to PDF"):
             pdf_buffer = export_to_pdf(timetables, num_sections)
             st.download_button(label="Download PDF", data=pdf_buffer, file_name="timetables.pdf", mime="application/pdf")
+
