@@ -54,8 +54,8 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, start_t
                 current_datetime += timedelta(minutes=60)
                 classes_added += 1
             else:
-                st.warning(f"No available faculty for subject {subject}. Skipping this class.")
-
+                daily_schedule.append("Free")
+                
             # Reset if all subjects or faculty are used up
             if len(used_subjects) == len(subjects):
                 used_subjects.clear()
@@ -66,11 +66,16 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, start_t
             if current_datetime.time() >= end_time:
                 break
 
+        # Fill the rest of the day with "Free" if not enough classes were added
+        while len(daily_schedule) < num_classes:
+            daily_schedule.append("Free")
+
         timetable.append(daily_schedule)
 
     # Create DataFrame for easier viewing and PDF export
     columns = [f"Class {i + 1}" for i in range(num_classes)]
     return pd.DataFrame(timetable, columns=columns)
+
 
 
 # Streamlit UI code
