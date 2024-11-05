@@ -71,7 +71,4 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
     
     return timetable_df
 
-            # Button to export the timetable to PDF
-            if st.button("Export to PDF"):
-                pdf_buffer = export_to_pdf(timetable_df)
-                st.download_button(label="Download Timetable as PDF", data=pdf_buffer, file_name="timetable.pdf", mime="application/pdf")
+         
