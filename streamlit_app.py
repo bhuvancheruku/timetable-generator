@@ -122,16 +122,34 @@ if st.sidebar.checkbox("Add Lunch Break"):
     lunch_break_duration = st.sidebar.number_input("Lunch Break Duration (minutes)", min_value=1, value=60)
     breaks.append((lunch_break_time, lunch_break_duration))
 
-# Button to generate timetables
 if st.button("Generate Timetable"):
     if not group_name:
         st.error("Please enter a group name.")
     else:
-        timetables = generate_multiple_timetables(num_sections, start_time, end_time, st.session_state.subjects, st.session_state.faculty_members, breaks)
-        if timetables:
-            st.write(timetables)  # Display the generated timetables
+        # Logic to create the timetable structure
+        timetable_data = []
+        for subject, faculty in st.session_state.faculty_members.items():
+            timetable_data.append([subject] + faculty)
 
-            # Button to export timetables to PDF
-            if st.button("Export to PDF"):
-                pdf_buffer = export_to_pdf(timetables, num_sections)
-                st.download_button(label="Download PDF", data=pdf_buffer, file_name="timetables.pdf", mime="application/pdf")
+        # Convert timetable_data to a DataFrame for better presentation
+        df = pd.DataFrame(timetable_data)
+
+        # Display timetable in Streamlit
+        st.dataframe(df)
+
+        # PDF export functionality
+        output = io.BytesIO()
+        p = canvas.Canvas(output, pagesize=A4)
+        width, height = A4
+        
+        # Draw the timetable to PDF (simple example)
+        y_position = height - 50
+        for subject in df.columns:
+            p.drawString(100, y_position, subject)
+            y_position -= 20
+            
+        p.showPage()
+        p.save()
+        output.seek(0)
+
+        st.download_button("Download Timetable PDF", output, "timetable.pdf", "application/pdf")
