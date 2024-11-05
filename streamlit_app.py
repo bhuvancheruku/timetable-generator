@@ -89,22 +89,32 @@ if 'faculty_members' not in st.session_state:
     st.session_state.faculty_members = {}
 
 # Manually input subjects and their faculty
-if len(st.session_state.subjects) != num_subjects:
-    st.session_state.subjects = []
-    st.session_state.faculty_members = {}
-
 for i in range(num_subjects):
-    subject_name = st.sidebar.text_input(f"Subject Name {i + 1}", value=st.session_state.subjects[i] if i < len(st.session_state.subjects) else "")
-    num_faculty = st.sidebar.number_input(f"Number of Faculty for {subject_name}", min_value=1, value=1, key=f"faculty_count_{i}")
+    if i >= len(st.session_state.subjects):
+        st.session_state.subjects.append("")  # Append empty string for new subjects
+    
+    subject_name = st.sidebar.text_input(f"Subject Name {i + 1}", value=st.session_state.subjects[i])
+    
+    # Store the subject name
+    if subject_name:
+        st.session_state.subjects[i] = subject_name
+    
+    # Manage faculty input
+    if subject_name not in st.session_state.faculty_members:
+        st.session_state.faculty_members[subject_name] = []
+
+    num_faculty = st.sidebar.number_input(f"Number of Faculty for {subject_name}", min_value=1, value=len(st.session_state.faculty_members[subject_name]), key=f"faculty_count_{i}")
     
     faculty_list = []
     for j in range(num_faculty):
-        faculty_name = st.sidebar.text_input(f"Faculty Name {j + 1} for {subject_name}", value=st.session_state.faculty_members.get(subject_name, [""])[j] if j < len(st.session_state.faculty_members.get(subject_name, [])) else "", key=f"faculty_{i}_{j}")
+        if j >= len(st.session_state.faculty_members[subject_name]):
+            st.session_state.faculty_members[subject_name].append("")  # Append empty string for new faculty members
 
+        faculty_name = st.sidebar.text_input(f"Faculty Name {j + 1} for {subject_name}", value=st.session_state.faculty_members[subject_name][j], key=f"faculty_{i}_{j}")
+        
         faculty_list.append(faculty_name)
 
     if subject_name:
-        st.session_state.subjects.append(subject_name)
         st.session_state.faculty_members[subject_name] = faculty_list
 
 # Timings
@@ -125,8 +135,6 @@ if st.button("Generate Timetables"):
         st.dataframe(timetable)
 
     # Option to export to PDF can be added here
-
-
 
     # Export to PDF
     if st.button("Export to PDF"):
