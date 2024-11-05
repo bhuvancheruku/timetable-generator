@@ -8,14 +8,30 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 import io
 
-
 # Function to generate the timetable
 def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=8, lab_sessions=3):
     # Calculate total break duration
     total_break_duration = sum(break_duration for _, break_duration in breaks)
     
-    # Calculate class duration
-    class_duration = (end_time.hour * 60 + end_time.minute - (start_time.hour * 60 + start_time.minute) - total_break_duration) // num_classes
+    # Validate that end_time is later than start_time
+    if end_time <= start_time:
+        st.error("End time must be later than start time.")
+        return pd.DataFrame()  # Return an empty DataFrame if the times are invalid
+
+    # Calculate total available minutes for classes
+    total_available_minutes = (end_time.hour * 60 + end_time.minute) - (start_time.hour * 60 + start_time.minute) - total_break_duration
+    
+    # Ensure that there are enough minutes for classes
+    if total_available_minutes <= 0 or num_classes <= 0:
+        st.error("Insufficient time available for the classes.")
+        return pd.DataFrame()  # Return an empty DataFrame if the time is insufficient
+
+    class_duration = total_available_minutes // num_classes
+    
+    if class_duration <= 0:
+        st.error("Class duration must be greater than zero.")
+        return pd.DataFrame()  # Return an empty DataFrame if class duration is invalid
+
     timetable = {day: [] for day in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]}
     
     for day in timetable:
@@ -130,12 +146,13 @@ if st.button("Generate Timetable"):
         st.error("Please enter a group name.")
     else:
         timetable_df = generate_timetable(start_time, end_time, st.session_state.subjects, st.session_state.faculty_members, breaks)
-        st.write(timetable_df)
+        if not timetable_df.empty:
+            st.write(timetable_df)
 
-        # Button to export the timetable to PDF
-        if st.button("Export to PDF"):
-            pdf_buffer = export_to_pdf(timetable_df)
-            st.download_button("Download PDF", pdf_buffer, "timetable.pdf", "application/pdf")
+            # Button to export the timetable to PDF
+            if st.button("Export to PDF"):
+                pdf_buffer = export_to_pdf(timetable_df)
+                st.download_button("Download PDF", pdf_buffer, "timetable.pdf", "application/pdf")
 
 
 
