@@ -97,6 +97,7 @@ st.title("Timetable Generator")
 start_time = st.sidebar.time_input("College Start Time", value=datetime.strptime("09:00 AM", "%I:%M %p").time())
 end_time = st.sidebar.time_input("College End Time", value=datetime.strptime("03:00 PM", "%I:%M %p").time())
 num_sections = st.sidebar.number_input("Number of Sections", min_value=1, value=1)
+num_classes = st.sidebar.number_input("Number of Classes per Day", min_value=1, value=5)  # New input for number of classes
 
 breaks = []
 if st.sidebar.checkbox("Add Morning Break"):
@@ -129,7 +130,7 @@ if st.button("Generate Timetable"):
         st.warning("Please ensure all subjects have at least one faculty member.")
     else:
         timetable_data, time_slots = generate_timetable(
-            start_time, end_time, subjects, faculty_members, breaks, num_classes=5, num_sections=num_sections
+            start_time, end_time, subjects, faculty_members, breaks, num_classes=num_classes, num_sections=num_sections  # Use num_classes here
         )
         flat_timetable_df = pd.DataFrame([
             {"Section": section, "Day": day, "Time Slot": time_slot[0] + " - " + time_slot[1] if time_slot[1] != "BREAK" else "BREAK",
