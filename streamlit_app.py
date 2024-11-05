@@ -8,6 +8,15 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 import io
 
+import pandas as pd
+import random
+from datetime import timedelta
+import io
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+import streamlit as st
+from datetime import time
+
 # Function to generate the timetable
 def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=8, lab_sessions=3):
     # Calculate total break duration
@@ -82,12 +91,23 @@ def export_to_pdf(timetable_df):
 st.title("Timetable Generator")
 
 # Sidebar inputs for college timings
-start_time = st.sidebar.time_input("College Start Time", value=time(9, 0))
-end_time = st.sidebar.time_input("College End Time", value=time(17, 0))
+start_hour = st.sidebar.number_input("College Start Hour", min_value=1, max_value=12, value=9)
+start_minute = st.sidebar.number_input("College Start Minute", min_value=0, max_value=59, value=0)
+start_am_pm = st.sidebar.radio("Select AM/PM for Start Time", ["AM", "PM"])
+
+end_hour = st.sidebar.number_input("College End Hour", min_value=1, max_value=12, value=5)
+end_minute = st.sidebar.number_input("College End Minute", min_value=0, max_value=59, value=0)
+end_am_pm = st.sidebar.radio("Select AM/PM for End Time", ["AM", "PM"])
+
+# Convert to 24-hour format
+start_time = time(start_hour + (12 if start_am_pm == "PM" and start_hour < 12 else 0),
+                  start_minute)
+end_time = time(end_hour + (12 if end_am_pm == "PM" and end_hour < 12 else 0),
+                end_minute)
 
 # Break timings input
-morning_break_duration = 10  # 10 minutes
-lunch_break_duration = 60  # 60 minutes
+morning_break_duration = st.sidebar.number_input("Morning Break Duration (minutes)", min_value=1, value=10)
+lunch_break_duration = st.sidebar.number_input("Lunch Break Duration (minutes)", min_value=1, value=60)
 breaks = [(time(11, 0), morning_break_duration), (time(13, 0), lunch_break_duration)]
 
 # Group name and number of sections
@@ -153,6 +173,9 @@ if st.button("Generate Timetable"):
             if st.button("Export to PDF"):
                 pdf_buffer = export_to_pdf(timetable_df)
                 st.download_button("Download PDF", pdf_buffer, "timetable.pdf", "application/pdf")
+
+
+
 
 
 
