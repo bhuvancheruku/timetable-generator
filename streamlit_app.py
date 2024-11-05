@@ -32,29 +32,29 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
 
     time_slots = sorted(set(time_slots))
 
+    # To avoid faculty overlap across sections
+    faculty_usage = {section: {day: set() for day in days} for section in timetables}
+
     for section in timetables:
-        used_faculty = set()  # Unique set of used faculty for this section
         for day in days:
+            available_faculty = {subject: set(faculty_members[subject]) for subject in subjects}
             for time_slot in time_slots:
                 if time_slot[1] == "BREAK":
                     timetables[section][day].append((time_slot, "BREAK", ""))
                     continue
 
-                # Assign subjects to the time slots for the current section
-                available_subjects = subjects.copy()  # Allow overlapping subjects
-                random.shuffle(available_subjects)  # Shuffle to randomize subject assignment
-
-                for subject in available_subjects:
-                    available_faculty = [fac for fac in faculty_members[subject] if fac not in used_faculty]
-                    if available_faculty:
-                        faculty = random.choice(available_faculty)
-                        used_faculty.add(faculty)
-                        timetables[section][day].append((time_slot, subject, faculty))
-                
-                # Ensure we do not exceed the number of classes available
-                if len(timetables[section][day]) >= num_classes:
-                    break  # Exit if we have assigned enough classes
-
+                # Ensure each subject is covered without overlapping faculty
+                assigned_subjects = set()
+                for subject in subjects:
+                    if subject not in assigned_subjects:
+                        available_faculty_for_subject = available_faculty[subject] - faculty_usage[section][day]
+                        if available_faculty_for_subject:
+                            faculty = random.choice(list(available_faculty_for_subject))
+                            faculty_usage[section][day].add(faculty)
+                            timetables[section][day].append((time_slot, subject, faculty))
+                            assigned_subjects.add(subject)
+                            break  # Once a subject is assigned, move to the next subject
+                        
     return timetables, time_slots
 
 # Function to export timetable as PDF
