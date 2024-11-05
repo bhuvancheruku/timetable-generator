@@ -80,17 +80,24 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, start_t
 st.title("Timetable Generator")
 group_name = st.sidebar.text_input("Group Name")
 num_sections = st.sidebar.number_input("Number of Sections", min_value=1, value=1)
-num_classes_per_day = 5  # Fixed number of classes in a day
-num_days = 6  # Fixed number of days in a week
-subjects = st.sidebar.text_input("Subjects (comma-separated)").split(",")
-faculty_input = st.sidebar.text_area("Faculty Members (comma-separated per subject; e.g., 'Subject1: Faculty1, Faculty2; Subject2: Faculty3, Faculty4')")
+num_subjects = st.sidebar.number_input("Number of Subjects", min_value=1, value=1)
 
-# Parse faculty members input
+# Manually input subjects and their faculty
+subjects = []
 faculty_members = {}
-if faculty_input:
-    for entry in faculty_input.split(';'):
-        subject, faculty_list = entry.split(':')
-        faculty_members[subject.strip()] = [fac.strip() for fac in faculty_list.split(',')]
+
+for i in range(num_subjects):
+    subject_name = st.sidebar.text_input(f"Subject Name {i + 1}")
+    num_faculty = st.sidebar.number_input(f"Number of Faculty for {subject_name}", min_value=1, value=1)
+    faculty_list = []
+    
+    for j in range(num_faculty):
+        faculty_name = st.sidebar.text_input(f"Faculty Name {j + 1} for {subject_name}")
+        faculty_list.append(faculty_name)
+
+    if subject_name:
+        subjects.append(subject_name)
+        faculty_members[subject_name] = faculty_list
 
 # Timings
 start_time = st.sidebar.time_input("College Start Time", value=datetime.strptime("09:00", "%H:%M").time())
@@ -101,14 +108,13 @@ afternoon_break_time = st.sidebar.time_input("Afternoon Break Time", value=datet
 if st.button("Generate Timetables"):
     all_timetables = {}
     for section in range(num_sections):
-        timetable_df = generate_timetable(num_classes_per_day, num_days, subjects, faculty_members, start_time, end_time, morning_break_time, afternoon_break_time)
+        timetable_df = generate_timetable(5, 6, subjects, faculty_members, start_time, end_time, morning_break_time, afternoon_break_time)
         all_timetables[f"Section {section + 1}"] = timetable_df
 
     # Display the timetables
     for section, timetable in all_timetables.items():
         st.subheader(section)
         st.dataframe(timetable)
-
 
     # Export to PDF
     if st.button("Export to PDF"):
