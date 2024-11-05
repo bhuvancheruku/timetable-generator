@@ -17,7 +17,7 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
     end_datetime = datetime.combine(today, end_time)
 
     # Calculate total available time minus breaks
-    total_minutes = (end_datetime - start_datetime).total_seconds() / 60 - sum(break[1] for break in breaks)
+    total_minutes = (end_datetime - start_datetime).total_seconds() / 60 - sum(break_info[1] for break_info in breaks)
     class_duration = total_minutes // num_classes
 
     # Generate time slots
