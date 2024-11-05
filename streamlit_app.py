@@ -103,22 +103,19 @@ no_lunch_break = st.sidebar.checkbox("No Lunch Break Present")
 
 if not no_break:
     num_breaks = st.sidebar.number_input("Number of Breaks", min_value=0, max_value=2, value=1)
-    breaks = []
-    for i in range(num_breaks):
-        break_hour = st.sidebar.number_input(f"Break {i + 1} Hour", min_value=1, max_value=12, value=11)
-        break_minute = st.sidebar.number_input(f"Break {i + 1} Minute", min_value=0, max_value=59, value=0)
-        break_am_pm = st.sidebar.radio(f"Break {i + 1} AM/PM", options=["AM", "PM"], key=f"break_am_pm_{i}")
-        break_duration = st.sidebar.number_input(f"Break {i + 1} Duration (minutes)", min_value=1, value=10)
-        break_time = time(break_hour % 12 + (12 if break_am_pm == "PM" else 0), break_minute)
-        breaks.append((break_time, break_duration))
+    breaks = []  # Initialize breaks as an empty list
 
-if not no_lunch_break:
-    lunch_break_hour = st.sidebar.number_input("Lunch Break Hour", min_value=1, max_value=12, value=1)
-    lunch_break_minute = st.sidebar.number_input("Lunch Break Minute", min_value=0, max_value=59, value=0)
-    lunch_break_am_pm = st.sidebar.radio("Lunch Break AM/PM", options=["AM", "PM"])
+# Collect break timings and durations from user input
+if st.sidebar.checkbox("Add Morning Break"):
+    morning_break_time = st.sidebar.time_input("Morning Break Time", value=time(11, 0))
+    morning_break_duration = st.sidebar.number_input("Morning Break Duration (minutes)", min_value=1, value=10)
+    breaks.append((morning_break_time, morning_break_duration))
+
+if st.sidebar.checkbox("Add Lunch Break"):
+    lunch_break_time = st.sidebar.time_input("Lunch Break Time", value=time(13, 0))
     lunch_break_duration = st.sidebar.number_input("Lunch Break Duration (minutes)", min_value=1, value=60)
-    lunch_time = time(lunch_break_hour % 12 + (12 if lunch_break_am_pm == "PM" else 0), lunch_break_minute)
-    breaks.append((lunch_time, lunch_break_duration))
+    breaks.append((lunch_break_time, lunch_break_duration))
+
 
 # Manual input for subjects and faculty
 num_subjects = st.sidebar.number_input("Number of Subjects", min_value=1, value=5)
