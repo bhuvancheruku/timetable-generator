@@ -1,22 +1,20 @@
 from datetime import time
-import streamlit as st
-import pandas as pd
-import random
-from datetime import time, timedelta, datetime
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
 import tempfile
 
-from datetime import datetime, timedelta
+import streamlit as st
+import pandas as pd
+from datetime import datetime, timedelta, time
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 
-def generate_timetable(num_classes, num_days, subjects, faculty_members, morning_break_time, afternoon_break_time, lab_sessions):
+# Define the timetable generation function
+def generate_timetable(num_classes, num_days, subjects, faculty_members, start_time, end_time, morning_break_time, afternoon_break_time, lab_sessions):
     timetable = []
     for day in range(num_days):
         daily_schedule = []
         used_faculty = set()
         used_subjects = set()
         
-        # Convert start_time to a datetime object for accurate time manipulation
         current_datetime = datetime.combine(datetime.today(), start_time)
         classes_added = 0
 
@@ -24,23 +22,23 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, morning
             # Check for morning break
             if current_datetime.time() == morning_break_time:
                 daily_schedule.append("Break (10 mins)")
-                current_datetime += timedelta(minutes=morning_break_duration)
+                current_datetime += timedelta(minutes=10)
                 continue
 
             # Check for afternoon break
             if current_datetime.time() == afternoon_break_time:
                 daily_schedule.append("Lunch Break (1 hr)")
-                current_datetime += timedelta(minutes=afternoon_break_duration)
+                current_datetime += timedelta(hours=1)
                 continue
 
             # Check if lab session should be added
-            if lab_sessions[day] and classes_added < 3:  # Assume labs are only in the first 3 slots
+            if lab_sessions[day] and classes_added < 3:
                 lab_subject = random.choice(subjects)
                 lab_faculty = random.choice(faculty_members[lab_subject])
                 daily_schedule.append(f"Lab - {lab_subject} ({lab_faculty})")
                 used_faculty.add(lab_faculty)
                 used_subjects.add(lab_subject)
-                current_datetime += timedelta(minutes=class_duration)
+                current_datetime += timedelta(minutes=60)
                 classes_added += 1
                 continue
 
@@ -49,10 +47,9 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, morning
             faculty = random.choice([fac for fac in faculty_members[subject] if fac not in used_faculty])
             daily_schedule.append(f"{subject} - {faculty}")
 
-            # Update sets to avoid overlap
             used_faculty.add(faculty)
             used_subjects.add(subject)
-            current_datetime += timedelta(minutes=class_duration)
+            current_datetime += timedelta(minutes=60)
             classes_added += 1
 
             # Reset if all subjects or faculty are used up
@@ -70,85 +67,76 @@ def generate_timetable(num_classes, num_days, subjects, faculty_members, morning
     # Create DataFrame for easier viewing and PDF export
     columns = [f"Class {i + 1}" for i in range(num_classes)]
     return pd.DataFrame(timetable, columns=columns)
-    
-# PDF export function
-def export_to_pdf(timetable_df):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
-        c = canvas.Canvas(temp_pdf.name, pagesize=A4)
-        width, height = A4
 
-        # Title
-        c.setFont("Helvetica-Bold", 16)
-        c.drawString(100, height - 50, "Generated Timetable")
-
-        # Write each day
-        y = height - 80
-        for i, day in enumerate(timetable_df.index):
-            c.setFont("Helvetica", 12)
-            c.drawString(30, y, f"Day {i+1}:")
-            y -= 20
-            for cls in timetable_df.columns:
-                c.drawString(50, y, f"{cls}: {timetable_df.loc[day, cls]}")
-                y -= 20
-            y -= 10  # Space between days
-            if y < 50:
-                c.showPage()
-                y = height - 50
-
-        c.save()
-    return temp_pdf.name
-
-# Streamlit Interface
+# Streamlit UI code
 st.title("College Timetable Generator")
 
-# Sidebar for user inputs
-st.sidebar.header("Configure Timetable")
+# Get user input for basic settings
+num_days = st.sidebar.number_input("Enter number of days (6 for Mon-Sat)", min_value=1, max_value=6, value=6)
+num_classes = st.sidebar.number_input("Enter number of classes per day", min_value=1, max_value=10, value=8)
+
+# Input start and end times for college day
 start_time = st.sidebar.time_input("College Start Time", value=time(9, 0))
 end_time = st.sidebar.time_input("College End Time", value=time(17, 0))
 
-morning_break_time = st.sidebar.time_input("Morning Break Start", value=time(10, 30))
-morning_break_duration = 10  # Fixed 10 minutes
+# Input break times
+morning_break_time = st.sidebar.time_input("Morning Break Time", value=time(11, 0))
+afternoon_break_time = st.sidebar.time_input("Lunch Break Time", value=time(13, 0))
 
-afternoon_break_time = st.sidebar.time_input("Lunch Break Start", value=time(13, 0))
-afternoon_break_duration = 60  # Fixed 1 hour
+# **Faculty and Subject Input Options**
 
-num_classes = st.sidebar.number_input("Number of Classes per Day", min_value=1, max_value=8, value=8)
-num_days = 6  # Fixed 6 days a week
+# Option 1: Using individual inputs
+subjects = {}
+st.subheader("Enter Subjects and Faculty")
 
-# Input subjects and faculty
-st.sidebar.write("Subjects and Faculty Members")
-subjects = ["Math", "Physics", "Chemistry", "Biology", "Computer Science"]
-faculty_members = {
-    "Math": ["Faculty 1", "Faculty 2"],
-    "Physics": ["Faculty 3", "Faculty 4"],
-    "Chemistry": ["Faculty 5", "Faculty 6"],
-    "Biology": ["Faculty 7", "Faculty 8"],
-    "Computer Science": ["Faculty 9", "Faculty 10"]
-}
+num_subjects = st.sidebar.number_input("Enter the number of subjects", min_value=1, max_value=10, value=5)
 
-# Lab sessions configuration (3 labs per week)
-lab_sessions = [True, True, True, False, False, False]  # Lab sessions on first 3 days of the week
+for i in range(num_subjects):
+    subject_name = st.text_input(f"Subject {i + 1} Name", key=f"subject_{i}")
+    faculty_1 = st.text_input(f"Faculty 1 for {subject_name}", key=f"faculty1_{i}")
+    faculty_2 = st.text_input(f"Faculty 2 for {subject_name}", key=f"faculty2_{i}")
+    subjects[subject_name] = [faculty_1, faculty_2]
 
-class_duration = 50  # Each class duration in minutes
+# Option 2: Using bulk input (uncomment to use)
+# st.subheader("Bulk Entry for Subjects and Faculty")
+# st.write("Enter subjects and faculty in the following format:")
+# st.code("Subject Name - Faculty1, Faculty2\nExample:\nMath - John Doe, Jane Doe")
+# bulk_input = st.text_area("Enter Subjects and Faculty Members (one per line)")
+# if bulk_input:
+#     subjects = {}
+#     lines = bulk_input.split('\n')
+#     for line in lines:
+#         if '-' in line:
+#             subject, faculty_str = line.split('-')
+#             subject = subject.strip()
+#             faculty_list = [name.strip() for name in faculty_str.split(',')]
+#             subjects[subject] = faculty_list
 
-# Generate timetable
-timetable_df = generate_timetable(
-    num_classes=num_classes,
-    num_days=num_days,
-    subjects=subjects,
-    faculty_members=faculty_members,
-    morning_break_time=morning_break_time,
-    afternoon_break_time=afternoon_break_time,
-    lab_sessions=lab_sessions
-)
+# Input lab sessions
+lab_sessions = [st.checkbox(f"Lab session on Day {i + 1}") for i in range(num_days)]
 
-# Display generated timetable
-st.write("## Generated Timetable")
-st.dataframe(timetable_df)
+# Generate the timetable
+if st.button("Generate Timetable"):
+    timetable_df = generate_timetable(
+        num_classes, num_days, list(subjects.keys()), subjects, 
+        start_time, end_time, morning_break_time, afternoon_break_time, lab_sessions
+    )
+    st.subheader("Generated Timetable")
+    st.dataframe(timetable_df)
 
-# PDF Export Button
-if st.button("Export Timetable to PDF"):
-    pdf_path = export_to_pdf(timetable_df)
-    st.success("Timetable exported to PDF successfully.")
-    with open(pdf_path, "rb") as file:
-        st.download_button("Download PDF", file, file_name="timetable.pdf")
+    # Export to PDF
+    if st.button("Export to PDF"):
+        pdf_path = "/tmp/timetable.pdf"
+        c = canvas.Canvas(pdf_path, pagesize=A4)
+        c.drawString(100, 800, "Generated Timetable")
+        
+        y_position = 750
+        for index, row in timetable_df.iterrows():
+            row_text = f"Day {index + 1}: " + ", ".join(row)
+            c.drawString(100, y_position, row_text)
+            y_position -= 20
+        
+        c.save()
+        with open(pdf_path, "rb") as pdf_file:
+            st.download_button(label="Download Timetable as PDF", data=pdf_file, file_name="timetable.pdf")
+
