@@ -7,11 +7,6 @@ from datetime import datetime, timedelta, time
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
-import streamlit as st
-import pandas as pd
-import random
-from datetime import datetime, timedelta
-
 def generate_timetable(num_classes, num_days, subjects, faculty_members, start_time, end_time, morning_break_time, afternoon_break_time):
     timetable = []
     
