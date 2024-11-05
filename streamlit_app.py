@@ -7,6 +7,11 @@ from datetime import datetime, timedelta, time
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
+import streamlit as st
+import pandas as pd
+import random
+from datetime import datetime, timedelta
+
 def generate_timetable(num_classes, num_days, subjects, faculty_members, start_time, end_time, morning_break_time, afternoon_break_time):
     timetable = []
     
@@ -82,22 +87,29 @@ group_name = st.sidebar.text_input("Group Name")
 num_sections = st.sidebar.number_input("Number of Sections", min_value=1, value=1)
 num_subjects = st.sidebar.number_input("Number of Subjects", min_value=1, value=1)
 
+# Store the subjects and faculty members in session state to maintain state across reruns
+if 'subjects' not in st.session_state:
+    st.session_state.subjects = []
+if 'faculty_members' not in st.session_state:
+    st.session_state.faculty_members = {}
+
 # Manually input subjects and their faculty
-subjects = []
-faculty_members = {}
+if len(st.session_state.subjects) != num_subjects:
+    st.session_state.subjects = []
+    st.session_state.faculty_members = {}
 
 for i in range(num_subjects):
-    subject_name = st.sidebar.text_input(f"Subject Name {i + 1}")
-    num_faculty = st.sidebar.number_input(f"Number of Faculty for {subject_name}", min_value=1, value=1)
-    faculty_list = []
+    subject_name = st.sidebar.text_input(f"Subject Name {i + 1}", value=st.session_state.subjects[i] if i < len(st.session_state.subjects) else "")
+    num_faculty = st.sidebar.number_input(f"Number of Faculty for {subject_name}", min_value=1, value=1, key=f"faculty_count_{i}")
     
+    faculty_list = []
     for j in range(num_faculty):
-        faculty_name = st.sidebar.text_input(f"Faculty Name {j + 1} for {subject_name}")
+        faculty_name = st.sidebar.text_input(f"Faculty Name {j + 1} for {subject_name}", value=st.session_state.faculty_members.get(subject_name, [""])[j] if j < len(st.session_state.faculty_members.get(subject_name, [])) else "")
         faculty_list.append(faculty_name)
 
     if subject_name:
-        subjects.append(subject_name)
-        faculty_members[subject_name] = faculty_list
+        st.session_state.subjects.append(subject_name)
+        st.session_state.faculty_members[subject_name] = faculty_list
 
 # Timings
 start_time = st.sidebar.time_input("College Start Time", value=datetime.strptime("09:00", "%H:%M").time())
@@ -108,13 +120,16 @@ afternoon_break_time = st.sidebar.time_input("Afternoon Break Time", value=datet
 if st.button("Generate Timetables"):
     all_timetables = {}
     for section in range(num_sections):
-        timetable_df = generate_timetable(5, 6, subjects, faculty_members, start_time, end_time, morning_break_time, afternoon_break_time)
+        timetable_df = generate_timetable(5, 6, st.session_state.subjects, st.session_state.faculty_members, start_time, end_time, morning_break_time, afternoon_break_time)
         all_timetables[f"Section {section + 1}"] = timetable_df
 
     # Display the timetables
     for section, timetable in all_timetables.items():
         st.subheader(section)
         st.dataframe(timetable)
+
+    # Option to export to PDF can be added here
+
 
     # Export to PDF
     if st.button("Export to PDF"):
