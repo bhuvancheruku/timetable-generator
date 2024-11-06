@@ -7,9 +7,10 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 
-# Custom Styles
+# --- Custom Styles for Neon-Themed UI ---
 st.markdown("""
     <style>
+        /* Background and text color */
         body {
             background-color: #1f2335;
             color: #a9b1d6;
@@ -17,15 +18,22 @@ st.markdown("""
         }
         h1, h2 {
             color: #7aa2f7;
+            text-align: center;
+            letter-spacing: 0.1em;
         }
+        
+        /* Team section alignment */
         .team-section {
             display: flex;
-            justify-content: start;
+            justify-content: center;
             gap: 20px;
             margin: 30px 0;
         }
+        
+        /* Team member styling */
         .team-member {
             text-align: center;
+            margin: 10px;
         }
         .team-member img {
             border-radius: 50%;
@@ -37,12 +45,16 @@ st.markdown("""
             color: #c3e88d;
             font-size: 1.1em;
         }
+        
+        /* Scrollable frame styling */
         .scroll-frame {
             background: rgba(35, 38, 55, 0.8);
             padding: 20px;
             border-radius: 12px;
             margin-top: 20px;
         }
+
+        /* Button styling */
         .pdf-btn {
             margin-top: 20px;
             display: inline-block;
@@ -51,14 +63,36 @@ st.markdown("""
             color: #1f2335;
             font-weight: bold;
             border-radius: 5px;
+            text-decoration: none;
         }
-    </style>
-    """, unsafe_allow_html=True)
 
-# Title Section
+        /* Floating effect for blobs */
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(30px);
+            opacity: 0.6;
+            animation: floating 6s ease-in-out infinite;
+        }
+        .blob1 { background: #7aa2f7; width: 200px; height: 200px; top: 20%; left: 10%; }
+        .blob2 { background: #bb9af7; width: 250px; height: 250px; top: 50%; right: 10%; }
+        
+        @keyframes floating {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+    </style>
+""", unsafe_allow_html=True)
+
+# --- Title Section ---
 st.title("Neon-Themed Timetable Generator")
 
-# Team Section (Aligned Horizontally)
+# --- Floating Blobs for Neon Effect ---
+st.markdown("<div class='blob blob1'></div>", unsafe_allow_html=True)
+st.markdown("<div class='blob blob2'></div>", unsafe_allow_html=True)
+
+# --- Team Section ---
 st.subheader("Meet the Development Team")
 team_names = ["Member 1", "Member 2", "Member 3", "Member 4", "Member 5"]
 st.markdown("<div class='team-section'>", unsafe_allow_html=True)
@@ -70,10 +104,6 @@ for name in team_names:
         </div>
     """, unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
-
-# Continue with the rest of your Streamlit app code here...
-# For brevity, the timetable generation and export functions are omitted in this snippet.
-
 
 # --- Timetable Generation Section ---
 st.subheader("Generate Timetable")
