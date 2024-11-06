@@ -76,6 +76,8 @@ st.markdown("""
         }
         .blob1 { background: #7aa2f7; width: 200px; height: 200px; top: 20%; left: 10%; }
         .blob2 { background: #bb9af7; width: 250px; height: 250px; top: 50%; right: 10%; }
+        .blob1 { background: #7aa2f7; width: 200px; height: 200px; top: 20%; left: 10%; }
+        .blob1 { background: #7aa2f7; width: 200px; height: 200px; top: 20%; left: 10%; }
         
         @keyframes floating {
             0%, 100% { transform: translateY(0); }
