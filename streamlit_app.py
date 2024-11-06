@@ -12,14 +12,13 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
     timetables = {f"Section {i+1}": {day: [] for day in days} for i in range(num_sections)}
 
-    # Use the user-defined start_time and end_time to calculate the time slots
     today = datetime.now().date()
     start_datetime = datetime.combine(today, start_time)
     end_datetime = datetime.combine(today, end_time)
 
-    # Calculate total available minutes for classes, taking into account break durations
+    # Calculate total available minutes for classes, excluding breaks
     total_available_minutes = (end_datetime - start_datetime).seconds // 60 - sum(break_info[1] for break_info in breaks)
-    class_duration = total_available_minutes // num_classes
+    class_duration = total_available_minutes // num_classes  # Calculate duration for each class
 
     # Generate time slots for the classes
     time_slots = []
@@ -29,10 +28,12 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
         time_slots.append((current_time.strftime("%I:%M %p"), end_time_slot.strftime("%I:%M %p")))
         current_time = end_time_slot
 
-    # Add breaks to time slots
+    # Add breaks to time slots if not a half-day schedule
     if not half_day:
         for break_time, duration in breaks:
             time_slots.append((break_time.strftime("%I:%M %p"), "BREAK"))
+
+    # Sort time slots to ensure classes and breaks are in order
     time_slots = sorted(set(time_slots))
 
     # Track faculty usage to avoid overlaps
@@ -170,6 +171,7 @@ if st.button("Generate Timetable"):
         st.session_state.flat_timetable_df = flat_timetable_df
 
         st.write("### Timetable")
+
         st.dataframe(flat_timetable_df)
 
 if 'flat_timetable_df' in st.session_state:
