@@ -91,15 +91,15 @@ def export_to_pdf(timetables, time_slots, branch_name):
             data.append(row)
 
         timetable_table = Table(data, colWidths=[50] + [65] * len(time_slots))
-        timetable_table.setStyle(TableStyle([
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('FONTSIZE', (0, 0), (-1, -1), 8),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.whitesmoke),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+        timetable_table.setStyle(TableStyle([ 
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black), 
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey), 
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black), 
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'), 
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), 
+            ('FONTSIZE', (0, 0), (-1, -1), 8), 
+            ('BACKGROUND', (0, 1), (-1, -1), colors.whitesmoke), 
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]), 
         ]))
 
         elements.append(timetable_table)
@@ -153,7 +153,7 @@ if st.button("Generate Timetable"):
             start_time, end_time, subjects, faculty_members, breaks, num_classes=num_classes, num_sections=num_sections
         )
         
-        flat_timetable_df = pd.DataFrame([
+        flat_timetable_df = pd.DataFrame([ 
             {"Branch": branch_name, "Section": section, "Day": day,
              "Time Slot": time_slot[0] + " - " + time_slot[1] if time_slot[1] != "BREAK" else "BREAK",
              "Subject": subject, "Faculty": faculty}
