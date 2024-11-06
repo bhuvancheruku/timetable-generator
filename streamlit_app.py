@@ -119,6 +119,7 @@ end_time = st.sidebar.time_input("College End Time", value=datetime.strptime("03
 num_sections = st.sidebar.number_input("Number of Sections", min_value=1, value=1)
 num_classes = st.sidebar.number_input("Number of Classes per Day", min_value=1, value=5)
 
+# Remove hardcoded break times and let users specify custom ones
 breaks = []
 if st.sidebar.checkbox("Add Morning Break"):
     morning_break_time = st.sidebar.time_input("Morning Break Time", value=datetime.strptime("11:00 AM", "%I:%M %p").time())
