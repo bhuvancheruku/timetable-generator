@@ -7,7 +7,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 
-# Function to generate the timetable without faculty overlap across all sections and days
+# Function to generate the timetable ensuring no faculty overlaps and all subjects appear daily
 def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=5, num_sections=1, half_day=False):
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
     timetables = {f"Section {i+1}": {day: [] for day in days} for i in range(num_sections)}
@@ -16,9 +16,11 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
     start_datetime = datetime.combine(today, start_time)
     end_datetime = datetime.combine(today, end_time)
 
+    # Calculate class duration based on available minutes and breaks
     total_minutes = (end_datetime - start_datetime).total_seconds() / 60 - sum(break_info[1] for break_info in breaks)
     class_duration = total_minutes // num_classes
 
+    # Generate time slots
     time_slots = []
     current_time = start_datetime
     for _ in range(num_classes):
@@ -26,49 +28,44 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
         time_slots.append((current_time.strftime("%I:%M %p"), end_time.strftime("%I:%M %p")))
         current_time = end_time
 
+    # Add breaks to time slots
     if not half_day:
         for break_time, duration in breaks:
             time_slots.append((break_time.strftime("%I:%M %p"), "BREAK"))
 
     time_slots = sorted(set(time_slots))
 
-    # Track faculty availability across sections, days, and time slots
-    faculty_availability = {faculty: {day: set() for day in days} for subject in subjects for faculty in faculty_members[subject]}
+    # Track faculty availability to avoid overlaps
+    faculty_usage = {faculty: {day: set() for day in days} for subject in subjects for faculty in faculty_members[subject]}
 
     for section in timetables:
         for day in days:
-            # Shuffle subjects and faculty for randomness
-            daily_subjects = random.sample(subjects, len(subjects))
-            daily_schedule = []
+            daily_subjects = random.sample(subjects, len(subjects))  # Randomize subjects for variety
 
             for time_slot in time_slots:
                 if time_slot[1] == "BREAK":
-                    daily_schedule.append((time_slot, "BREAK", ""))
+                    timetables[section][day].append((time_slot, "BREAK", ""))
                     continue
 
-                assigned = False
-                for subject in daily_subjects:
-                    # Find available faculty for the subject at this time slot
+                # Attempt to assign each subject exactly once per day
+                for subject in daily_subjects[:]:  # Copy to allow removal once assigned
+                    # Filter faculty to avoid overlaps
                     available_faculty = [
                         faculty for faculty in faculty_members[subject]
-                        if faculty not in faculty_availability[faculty][day]
+                        if time_slot not in faculty_usage[faculty][day]
                     ]
 
                     if available_faculty:
                         selected_faculty = random.choice(available_faculty)
-                        daily_schedule.append((time_slot, subject, selected_faculty))
-                        faculty_availability[selected_faculty][day].add(time_slot)
-                        assigned = True
-                        break
+                        timetables[section][day].append((time_slot, subject, selected_faculty))
+                        faculty_usage[selected_faculty][day].add(time_slot)
+                        daily_subjects.remove(subject)
+                        break  # Move to next time slot once subject assigned
 
-                # Retry scheduling if unable to find a valid assignment for a subject in this time slot
-                if not assigned:
-                    daily_schedule = []  # Reset the schedule for the day if conflicts occur
-                    break
-
-            # Assign the schedule for the day to the timetable if successful
-            if daily_schedule:
-                timetables[section][day] = daily_schedule
+                # Check if we failed to assign all subjects
+                if daily_subjects:
+                    timetables[section][day] = []  # Reset and retry on conflict
+                    break  # Start over for this day
 
     return timetables, time_slots
 
