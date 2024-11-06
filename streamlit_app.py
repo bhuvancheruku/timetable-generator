@@ -7,11 +7,11 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 
-# Function to generate the timetable
+# Function to generate the timetable without faculty overlap
 def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=5, num_sections=1, half_day=False):
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
     timetables = {f"Section {i+1}": {day: [] for day in days} for i in range(num_sections)}
-    
+
     today = datetime.now().date()
     start_datetime = datetime.combine(today, start_time)
     end_datetime = datetime.combine(today, end_time)
@@ -32,39 +32,43 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
 
     time_slots = sorted(set(time_slots))
 
-    faculty_usage = {section: {day: set() for day in days} for section in timetables}
+    # Track faculty availability across sections and time slots
+    faculty_usage = {faculty: {day: set() for day in days} for subject in subjects for faculty in faculty_members[subject]}
 
     for section in timetables:
         for day in days:
-            shuffled_subjects = random.sample(subjects, len(subjects))
-            available_faculty = {subject: list(faculty_members[subject]) for subject in shuffled_subjects}
-
-            assigned_subjects = set()
-            assigned_faculty = set()
+            # Shuffle subjects and faculty for randomness
+            daily_subjects = random.sample(subjects, len(subjects))  # Ensure no repetition of subjects
+            daily_schedule = []  # To hold the schedule for each day
 
             for time_slot in time_slots:
                 if time_slot[1] == "BREAK":
-                    timetables[section][day].append((time_slot, "BREAK", ""))
+                    daily_schedule.append((time_slot, "BREAK", ""))
                     continue
 
-                for subject in shuffled_subjects:
-                    if subject not in assigned_subjects:
-                        available_faculty_for_subject = set(available_faculty[subject]) - assigned_faculty
-                        if available_faculty_for_subject:
-                            faculty = random.choice(list(available_faculty_for_subject))
-                            assigned_faculty.add(faculty)
-                            timetables[section][day].append((time_slot, subject, faculty))
-                            assigned_subjects.add(subject)
-                            break
+                for subject in daily_subjects:
+                    # Find available faculty for the subject at this time slot
+                    available_faculty = [
+                        faculty for faculty in faculty_members[subject]
+                        if faculty not in faculty_usage[faculty][day]
+                    ]
 
-            if len(assigned_subjects) < len(subjects):
-                timetables[section][day] = []
-                break
+                    if available_faculty:
+                        selected_faculty = random.choice(available_faculty)
+                        daily_schedule.append((time_slot, subject, selected_faculty))
+
+                        # Update the faculty usage for this time slot and day
+                        faculty_usage[selected_faculty][day].add(time_slot)
+                        daily_subjects.remove(subject)
+                        break
+
+            # Assign the schedule for the day to the timetable
+            timetables[section][day] = daily_schedule
 
     return timetables, time_slots
 
 # Function to export timetable as PDF
-def export_to_pdf(timetables, time_slots):
+def export_to_pdf(timetables, time_slots, branch_name):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     elements = []
@@ -110,8 +114,7 @@ branch_name = st.sidebar.text_input("Branch Name")
 start_time = st.sidebar.time_input("College Start Time", value=datetime.strptime("09:00 AM", "%I:%M %p").time())
 end_time = st.sidebar.time_input("College End Time", value=datetime.strptime("03:00 PM", "%I:%M %p").time())
 num_sections = st.sidebar.number_input("Number of Sections", min_value=1, value=1)
-num_classes = st.sidebar.number_input("Number of Classes per Day", min_value=1, value=5)  # New input for number of classes
-
+num_classes = st.sidebar.number_input("Number of Classes per Day", min_value=1, value=5)
 
 breaks = []
 if st.sidebar.checkbox("Add Morning Break"):
@@ -169,5 +172,5 @@ if st.button("Generate Timetable"):
 # Export PDF button
 if 'flat_timetable_df' in st.session_state:
     if st.button("Export to PDF"):
-        pdf_buffer = export_to_pdf(st.session_state.timetable_data, st.session_state.time_slots)
+        pdf_buffer = export_to_pdf(st.session_state.timetable_data, st.session_state.time_slots, branch_name)
         st.download_button("Download Timetable PDF", data=pdf_buffer, file_name=f"{branch_name}_timetable.pdf", mime="application/pdf")
