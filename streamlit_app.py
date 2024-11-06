@@ -20,7 +20,7 @@ st.markdown("""
         }
         .team-section {
             display: flex;
-            justify-content: center;
+            justify-content: start;
             gap: 20px;
             margin: 30px 0;
         }
