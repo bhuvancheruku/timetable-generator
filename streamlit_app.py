@@ -12,15 +12,16 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
     timetables = {f"Section {i+1}": {day: [] for day in days} for i in range(num_sections)}
 
+    # Use the user-defined start_time and end_time to calculate the time slots
     today = datetime.now().date()
     start_datetime = datetime.combine(today, start_time)
     end_datetime = datetime.combine(today, end_time)
 
-    # Calculate class duration based on total available time and number of classes
+    # Calculate total available minutes for classes, taking into account break durations
     total_available_minutes = (end_datetime - start_datetime).seconds // 60 - sum(break_info[1] for break_info in breaks)
     class_duration = total_available_minutes // num_classes
 
-    # Generate dynamic time slots
+    # Generate time slots for the classes
     time_slots = []
     current_time = start_datetime
     for _ in range(num_classes):
@@ -28,7 +29,7 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
         time_slots.append((current_time.strftime("%I:%M %p"), end_time_slot.strftime("%I:%M %p")))
         current_time = end_time_slot
 
-    # Adding breaks to the time slots
+    # Add breaks to time slots
     if not half_day:
         for break_time, duration in breaks:
             time_slots.append((break_time.strftime("%I:%M %p"), "BREAK"))
@@ -37,7 +38,7 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
     # Track faculty usage to avoid overlaps
     faculty_usage = {faculty: {day: set() for day in days} for subject in subjects for faculty in faculty_members[subject]}
 
-    # Assign subjects and ensure all subjects are assigned daily
+    # Assign subjects and ensure no subject is missed
     for section in timetables:
         for day in days:
             daily_subjects = subjects[:]
@@ -65,10 +66,10 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
                 if assigned_subject:
                     daily_subjects.remove(assigned_subject)
 
-            # If any subject was not assigned, retry until all subjects are assigned
+            # Retry if there are any subjects left unassigned
             if daily_subjects:
-                timetables[section][day] = []
-                break  # Reset the schedule for this day if all subjects couldn't be assigned
+                timetables[section][day] = []  # Reset timetable if subjects couldn't be assigned
+                break
 
     return timetables, time_slots
 
@@ -80,7 +81,7 @@ def export_to_pdf(timetables, time_slots, branch_name):
 
     for section, timetable in timetables.items():
         data = [["Day"] + [f"{start} - {end}" if end != "BREAK" else "BREAK" for start, end in time_slots]]
-        
+
         for day, classes in timetable.items():
             row = [day]
             for time_slot, subject, faculty in classes:
@@ -152,16 +153,17 @@ if st.button("Generate Timetable"):
         timetable_data, time_slots = generate_timetable(
             start_time, end_time, subjects, faculty_members, breaks, num_classes=num_classes, num_sections=num_sections
         )
-        
+
+        # Create a flattened DataFrame for easier viewing
         flat_timetable_df = pd.DataFrame([ 
             {"Branch": branch_name, "Section": section, "Day": day,
-             "Time Slot": time_slot[0] + " - " + time_slot[1] if time_slot[1] != "BREAK" else "BREAK",
+             "Time Slot": f"{time_slot[0]} - {time_slot[1]}" if time_slot[1] != "BREAK" else "BREAK",
              "Subject": subject, "Faculty": faculty}
             for section, days in timetable_data.items()
             for day, classes in days.items()
             for time_slot, subject, faculty in classes
         ])
-        
+
         st.session_state.timetable_data = timetable_data
         st.session_state.time_slots = time_slots
         st.session_state.flat_timetable_df = flat_timetable_df
