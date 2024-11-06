@@ -7,6 +7,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 
+# Function to generate the timetable ensuring no faculty overlaps and all subjects appear daily
 def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, num_classes=5, num_sections=1, half_day=False):
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
     timetables = {f"Section {i+1}": {day: [] for day in days} for i in range(num_sections)}
@@ -15,32 +16,32 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
     start_datetime = datetime.combine(today, start_time)
     end_datetime = datetime.combine(today, end_time)
 
-    # Calculate class duration based on available minutes and breaks
-    total_minutes = (end_datetime - start_datetime).total_seconds() / 60 - sum(break_info[1] for break_info in breaks)
-    class_duration = total_minutes // num_classes
+    # Calculate class duration based on total available time and number of classes
+    total_available_minutes = (end_datetime - start_datetime).seconds // 60 - sum(break_info[1] for break_info in breaks)
+    class_duration = total_available_minutes // num_classes
 
-    # Generate time slots
+    # Generate dynamic time slots
     time_slots = []
     current_time = start_datetime
     for _ in range(num_classes):
-        end_time = current_time + timedelta(minutes=class_duration)
-        time_slots.append((current_time.strftime("%I:%M %p"), end_time.strftime("%I:%M %p")))
-        current_time = end_time
+        end_time_slot = current_time + timedelta(minutes=class_duration)
+        time_slots.append((current_time.strftime("%I:%M %p"), end_time_slot.strftime("%I:%M %p")))
+        current_time = end_time_slot
 
-    # Add breaks to time slots
+    # Adding breaks to the time slots
     if not half_day:
         for break_time, duration in breaks:
             time_slots.append((break_time.strftime("%I:%M %p"), "BREAK"))
-
     time_slots = sorted(set(time_slots))
 
-    # Track faculty usage across days and sections
+    # Track faculty usage to avoid overlaps
     faculty_usage = {faculty: {day: set() for day in days} for subject in subjects for faculty in faculty_members[subject]}
 
+    # Assign subjects and ensure all subjects are assigned daily
     for section in timetables:
         for day in days:
-            daily_subjects = subjects[:]  # Clone list for daily subject assignments
-            random.shuffle(daily_subjects)  # Shuffle subjects for variety
+            daily_subjects = subjects[:]
+            random.shuffle(daily_subjects)
 
             for time_slot in time_slots:
                 if time_slot[1] == "BREAK":
@@ -49,7 +50,6 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
 
                 assigned_subject = None
                 for subject in daily_subjects:
-                    # Check available faculty
                     available_faculty = [
                         faculty for faculty in faculty_members[subject]
                         if time_slot not in faculty_usage[faculty][day]
@@ -62,17 +62,17 @@ def generate_timetable(start_time, end_time, subjects, faculty_members, breaks, 
                         assigned_subject = subject
                         break
 
-                # Remove assigned subject to avoid duplicate assignment in the day
                 if assigned_subject:
                     daily_subjects.remove(assigned_subject)
 
-            # If not all subjects are assigned, reset and retry the day
+            # If any subject was not assigned, retry until all subjects are assigned
             if daily_subjects:
-                timetables[section][day] = []  # Clear the day if all subjects weren't assigned successfully
-                break
+                timetables[section][day] = []
+                break  # Reset the schedule for this day if all subjects couldn't be assigned
 
     return timetables, time_slots
 
+# Function to export timetable as PDF
 def export_to_pdf(timetables, time_slots, branch_name):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
