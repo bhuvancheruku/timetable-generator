@@ -7,7 +7,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 
-# --- Custom Styles ---
+# Custom Styles
 st.markdown("""
     <style>
         body {
@@ -21,11 +21,11 @@ st.markdown("""
         .team-section {
             display: flex;
             justify-content: center;
+            gap: 20px;
             margin: 30px 0;
         }
         .team-member {
             text-align: center;
-            margin: 10px;
         }
         .team-member img {
             border-radius: 50%;
@@ -55,10 +55,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- Title Section ---
+# Title Section
 st.title("Neon-Themed Timetable Generator")
 
-# --- Team Section ---
+# Team Section (Aligned Horizontally)
 st.subheader("Meet the Development Team")
 team_names = ["Member 1", "Member 2", "Member 3", "Member 4", "Member 5"]
 st.markdown("<div class='team-section'>", unsafe_allow_html=True)
@@ -70,6 +70,10 @@ for name in team_names:
         </div>
     """, unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
+
+# Continue with the rest of your Streamlit app code here...
+# For brevity, the timetable generation and export functions are omitted in this snippet.
+
 
 # --- Timetable Generation Section ---
 st.subheader("Generate Timetable")
